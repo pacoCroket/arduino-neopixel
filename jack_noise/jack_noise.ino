@@ -63,7 +63,6 @@ uint8_t       colorLoop = 1;
 
 void setup() {
 //  Serial.begin(9600);
-  delay(1000);
   
   LEDS.addLeds<LED_TYPE,LED_PIN,COLOR_ORDER>(leds,NUM_LEDS);
   LEDS.setBrightness(BRIGHTNESS);
@@ -178,12 +177,12 @@ void ChangePaletteAndSettingsPeriodically()
   
   if( lastSecond != secondHand) {
     lastSecond = secondHand;
-    if( secondHand ==  0)  { currentPalette = RainbowColors_p;         speed = 10; scale = 5; colorLoop = 1; }
+    if( secondHand == 0)  { currentPalette = LavaColors_p;            speed =  8; scale = 7; colorLoop = 0; }
     if( secondHand ==  5)  { SetupPurpleAndGreenPalette();             speed = 5; scale = 3; colorLoop = 1; }
     if( secondHand == 10)  { SetupBlackAndWhiteStripedPalette();       speed = 8; scale = 5; colorLoop = 1; }
     if( secondHand == 15)  { currentPalette = ForestColors_p;          speed =  3; scale = 8; colorLoop = 0; }
     if( secondHand == 20)  { currentPalette = CloudColors_p;           speed =  4; scale = 5; colorLoop = 0; }
-    if( secondHand == 25)  { currentPalette = LavaColors_p;            speed =  8; scale = 7; colorLoop = 0; }
+    if( secondHand == 25)  { currentPalette = RainbowColors_p;         speed = 10; scale = 5; colorLoop = 1; }
     if( secondHand == 30)  { currentPalette = OceanColors_p;           speed = 10; scale = 10; colorLoop = 0; }
     if( secondHand == 35)  { currentPalette = PartyColors_p;           speed = 7; scale = 4; colorLoop = 1; }
     if( secondHand == 40)  { SetupRandomPalette();                     speed = 10; scale = 4; colorLoop = 1; }
