@@ -65,7 +65,8 @@ uint8_t speed = 20; // speed is set dynamically once we've started up
 // higher the value of scale, the more "zoomed out" the noise iwll be.  A value
 // of 1 will be so zoomed in, you'll mostly see solid colors.
 
-uint8_t scale = 15; // scale is set dynamically once we've started up
+double scale = 15; // scale is set dynamically once we've started up
+double scaleFactor = 0.2; 
 uint8_t interval = 10; // spaxe between slices
 
 CRGBPalette16 currentPalette( PartyColors_p );
@@ -124,8 +125,8 @@ void mapCoordToColor() {
 
   for (uint8_t i = 0; i < NUM_LEDS; i++) {
     // first value is the radius
-    uint8_t xoffset = ledsArray[i][0] * scale*0.2;
-    uint8_t yoffset = ledsArray[i][1] * scale*0.2;
+    uint8_t xoffset = ledsArray[i][0];
+    uint8_t yoffset = ledsArray[i][1];
     uint8_t zoffset = ledsArray[i][2];
     
     uint8_t index = inoise8(x + xoffset, y + yoffset, z + zoffset);
@@ -224,19 +225,18 @@ void ChangePaletteAndSettingsPeriodically()
   
   if( lastSecond != secondHand) {
     lastSecond = secondHand;
-    if( secondHand == 0)  { currentPalette = LavaColors_p;            speed =  8; scale = 7; colorLoop = 0; }
-    if( secondHand == 5)  { SetupBlackAndWhiteStripedPalette();       speed = 7; scale = 5; colorLoop = 1; }
-    if( secondHand ==  10)  { SetupPurpleAndGreenPalette();             speed = 4; scale = 5; colorLoop = 1; }
-//    if( secondHand == 15)  { currentPalette = ForestColors_p;          speed =  3; scale = 8; colorLoop = 0; }
-    if( secondHand == 20)  { currentPalette = CloudColors_p;           speed =  5; scale = 6; colorLoop = 0; }
-    if( secondHand == 25)  { currentPalette = RainbowColors_p;         speed = 9; scale = 5; colorLoop = 1; }
-    if( secondHand == 30)  { currentPalette = OceanColors_p;           speed = 10; scale = 12; colorLoop = 0; }
-    if( secondHand == 35)  { currentPalette = PartyColors_p;           speed = 8; scale = 4; colorLoop = 1; }
-    if( secondHand == 40)  { SetupRandomPalette();                     speed = 10; scale = 4; colorLoop = 1; }
-    if( secondHand == 45)  { SetupRandomPalette();                     speed = 8; scale = 15; colorLoop = 1; }
-    if( secondHand == 50)  { SetupRandomPalette();                     speed = 25; scale = 6; colorLoop = 1; }
-    if( secondHand == 55)  { currentPalette = RainbowStripeColors_p;   speed = 8; scale = 4; colorLoop = 1; }
-  }
+    if( secondHand == 0)  { currentPalette = LavaColors_p;            speed =  8; scale = 7 * scaleFactor; colorLoop = 0; }
+    if( secondHand == 5)  { SetupBlackAndWhiteStripedPalette();       speed = 7; scale = 5 * scaleFactor; colorLoop = 1; }
+    if( secondHand ==  10)  { SetupPurpleAndGreenPalette();             speed = 4; scale = 5 * scaleFactor; colorLoop = 1; }
+//    if( secondHand == 15)  { currentPalette = ForestColors_p;          speed =  3; scale = 8 * scaleFactor; colorLoop = 0; }
+    if( secondHand == 20)  { currentPalette = CloudColors_p;           speed =  5; scale = 6 * scaleFactor; colorLoop = 0; }
+    if( secondHand == 25)  { currentPalette = RainbowColors_p;         speed = 9; scale = 5 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 30)  { currentPalette = OceanColors_p;           speed = 10; scale = 12 * scaleFactor; colorLoop = 0; }
+    if( secondHand == 35)  { currentPalette = PartyColors_p;           speed = 8; scale = 4 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 40)  { SetupRandomPalette();                     speed = 10; scale = 4 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 45)  { SetupRandomPalette();                     speed = 8; scale = 15 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 50)  { SetupRandomPalette();                     speed = 25; scale = 6 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 55)  { currentPalette = RainbowStripeColors_p;   speed = 8; scale = 4 * scaleFactor; colorLoop = 1; }
 }
 
 // This function generates a random palette that's a gradient

@@ -5,19 +5,18 @@
 #define BRIGHTNESS  250
 #define LED_TYPE    WS2812
 #define COLOR_ORDER GRB
-#define NUM_SLICES 12
+//#define NUM_SLICES 12
 //#define NUM_SLICES 7
-#define NUM_LEDS 159
+#define NUM_LEDS 61
 #define NUM_SKIP_LEDS 5
 
-// each LED has 3 coordinates, [radius, height, angle]
-
-// [id, h, r], starting form one before and ending one after
-//const uint8_t zeroPlane[NUM_SLICES][3] = {{0, 0, 8}, {23, 14, 13}, {55, 33, 16}, {88, 51, 15}, {113, 64, 15}, {139, 73, 12}, {159, 81, 6}};
-
-const uint8_t zeroPlane[NUM_SLICES][3] = {{0, 0, 8}, {23, 14, 13}, {55, 33, 16}, {88, 51, 15}, {113, 64, 15}, {139, 73, 12}, {160, 81, 6}};
-const uint8_t halfPlane[NUM_SLICES][3] = {{0, 0, 8}, {12, 7, 9}, {23, 14, 13}, {30, 25, 15}, {55, 33, 16}, {70, 42, 16}, {88, 51, 15}, {113, 64, 15}, {121, 68, 14}, {139, 73, 12}, {146, 76, 10}, {159, 81, 6}};
-static uint8_t ledsArray[NUM_LEDS][4]; // Populated in setup [x, y, z, theta]
+// the box is 29 x 24 x 38 cm
+// store leds in x, y, z, cordinates
+const PROGMEM int ledsArray[NUM_LEDS][3] = {{29, 20, 4}, {29, 19, 7}, {29, 18, 10}, {29, 17, 13}, {29, 6, 23}, {29, 4, 21}, {29, 2, 19}, {20, 0, 10}, {19, -1, 10}, {19, -5, 10}, {19, -9, 10}, {17, -9, 10}, {17, -5, 10}, {17, -1, 10}, {14, 0, 10}, {17, 0, 23}, {18, 0, 25}, {19, 0, 27},
+{25, 0, 37}, {27, 2, 38}, {29, 4, 37}, {21, 16, 38}, {19, 19, 38}, {17, 23, 38}, {15, 24, 37}, {13, 24, 35}, 
+{1, 24, 36}, {0, 22, 37}, {1, 20, 38}, {6, 6, 38}, {2, 6, 38}, {0, 5, 36}, {0, 12, 26}, {-3, 12, 25}, {-7, 12, 24}, {-7, 12, 23}, {-3, 12, 22}, {0, 12, 21},
+{0, 5, 11}, {0, 3, 8}, {1, 1, 6}, {6, 5, 0}, {9, 5, 0}, {12, 5, 0}, {15, 22, 0}, {12, 22, 0}, {9, 22, 0}, {0, 21, 10}, {1, 24, 12}, {3, 24, 14},
+{6, 26, 20}, {13, 30, 18}, {14, 30, 16}, {17, 26, 14}, {26, 24, 22}, {29, 26, 22}, {31, 29, 22}, {32, 29, 22}, {30, 24, 22}, {29, 22, 22}};
 
 // This example combines two features of FastLED to produce a remarkable range of
 // effects from a relatively small amount of code.  This example combines FastLED's 
@@ -65,7 +64,8 @@ uint8_t speed = 20; // speed is set dynamically once we've started up
 // higher the value of scale, the more "zoomed out" the noise iwll be.  A value
 // of 1 will be so zoomed in, you'll mostly see solid colors.
 
-uint8_t scale = 15; // scale is set dynamically once we've started up
+double scale = 15; // scale is set dynamically once we've started up
+double scaleFactor = 2; 
 uint8_t interval = 10; // spaxe between slices
 
 CRGBPalette16 currentPalette( PartyColors_p );
@@ -81,34 +81,8 @@ void setup() {
   x = random8();
   y = random8();
   z = random8();
-  theta0 = random8();
-
-  generateCoords();
 }
 
-void generateCoords() {
-  for (int i = 0; i <= NUM_LEDS; i++) {    
-    for (int j = 0; j <= NUM_SLICES - 1; j++) {
-//      if (i >= zeroPlane[j][0]) {
-      if (i >= halfPlane[j][0]) {
-        uint8_t h = map(i, zeroPlane[j][0], zeroPlane[j+1][0], zeroPlane[j][1], zeroPlane[j+1][1]);
-        uint8_t r = map(i, zeroPlane[j][0], zeroPlane[j+1][0], zeroPlane[j][2], zeroPlane[j+1][2]);
-        uint8_t theta;
-        if (i % 2 == 0) {
-          theta = map(i, zeroPlane[j][0], zeroPlane[j+1][0], 0, 127);          
-        } else {
-          theta = map(i, zeroPlane[j][0], zeroPlane[j+1][0], 128, 255);          
-        }
-
-        ledsArray[i][0] = r*cos8(theta)-128; // cos8() has range [0-255]
-        ledsArray[i][1] = r*sin8(theta)-128;
-        ledsArray[i][2] = h;
-        ledsArray[i][3] = theta;
-        break;
-      }
-    }    
-  }
-}
 
 void mapCoordToColor() {
   // If we're runing at a low "speed", some 8-bit artifacts become visible
@@ -124,9 +98,10 @@ void mapCoordToColor() {
 
   for (uint8_t i = 0; i < NUM_LEDS; i++) {
     // first value is the radius
-    uint8_t xoffset = ledsArray[i][0] * scale*0.2;
-    uint8_t yoffset = ledsArray[i][1] * scale*0.2;
-    uint8_t zoffset = ledsArray[i][2];
+    
+    uint8_t xoffset = pgm_read_byte(&(ledsArray[i][0])) * scale;
+    uint8_t yoffset = pgm_read_byte(&(ledsArray[i][1])) * scale;
+    uint8_t zoffset = pgm_read_byte(&(ledsArray[i][2])) * scale;
     
     uint8_t index = inoise8(x + xoffset, y + yoffset, z + zoffset);
 //
@@ -178,30 +153,10 @@ void loop() {
 
   mapCoordToColor();
 
-//  sameAngle();
-
   LEDS.show();
 //   delay(20);
 }
 
-void sameAngle() {
-  
-  for (uint8_t i = 0; i < NUM_LEDS; i++) {
-    int index = 10;
-    int bri = 0;
-    if (ledsArray[i][3] < theta0 + 8 && ledsArray[i][3] > theta0 - 8) {
-//    for (int j = 0; j <= NUM_SLICES; j++) {
-//      if (i == zeroPlane[j][0]) {
-        bri = 220;
-//      }
-    }
-    
-    CRGB color = ColorFromPalette( currentPalette, index, bri);
-    leds[i] = color;
-  }
-  theta0 = round(theta0 + speed*0.05) % 255;  
-   delay(10);
-}
 
 
 // There are several different palettes of colors demonstrated here.
@@ -224,18 +179,18 @@ void ChangePaletteAndSettingsPeriodically()
   
   if( lastSecond != secondHand) {
     lastSecond = secondHand;
-    if( secondHand == 0)  { currentPalette = LavaColors_p;            speed =  8; scale = 7; colorLoop = 0; }
-    if( secondHand == 5)  { SetupBlackAndWhiteStripedPalette();       speed = 7; scale = 5; colorLoop = 1; }
-    if( secondHand ==  10)  { SetupPurpleAndGreenPalette();             speed = 4; scale = 5; colorLoop = 1; }
-//    if( secondHand == 15)  { currentPalette = ForestColors_p;          speed =  3; scale = 8; colorLoop = 0; }
-    if( secondHand == 20)  { currentPalette = CloudColors_p;           speed =  5; scale = 6; colorLoop = 0; }
-    if( secondHand == 25)  { currentPalette = RainbowColors_p;         speed = 9; scale = 5; colorLoop = 1; }
-    if( secondHand == 30)  { currentPalette = OceanColors_p;           speed = 10; scale = 12; colorLoop = 0; }
-    if( secondHand == 35)  { currentPalette = PartyColors_p;           speed = 8; scale = 4; colorLoop = 1; }
-    if( secondHand == 40)  { SetupRandomPalette();                     speed = 10; scale = 4; colorLoop = 1; }
-    if( secondHand == 45)  { SetupRandomPalette();                     speed = 8; scale = 15; colorLoop = 1; }
-    if( secondHand == 50)  { SetupRandomPalette();                     speed = 25; scale = 6; colorLoop = 1; }
-    if( secondHand == 55)  { currentPalette = RainbowStripeColors_p;   speed = 8; scale = 4; colorLoop = 1; }
+    if( secondHand == 0)  { currentPalette = LavaColors_p;            speed =  8; scale = 7 * scaleFactor; colorLoop = 0; }
+    if( secondHand == 5)  { SetupBlackAndWhiteStripedPalette();       speed = 7; scale = 5 * scaleFactor; colorLoop = 1; }
+    if( secondHand ==  10)  { SetupPurpleAndGreenPalette();             speed = 4; scale = 5 * scaleFactor; colorLoop = 1; }
+//    if( secondHand == 15)  { currentPalette = ForestColors_p;          speed =  3; scale = 8 * scaleFactor; colorLoop = 0; }
+    if( secondHand == 20)  { currentPalette = CloudColors_p;           speed =  5; scale = 6 * scaleFactor; colorLoop = 0; }
+    if( secondHand == 25)  { currentPalette = RainbowColors_p;         speed = 9; scale = 5 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 30)  { currentPalette = OceanColors_p;           speed = 10; scale = 12 * scaleFactor; colorLoop = 0; }
+    if( secondHand == 35)  { currentPalette = PartyColors_p;           speed = 8; scale = 4 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 40)  { SetupRandomPalette();                     speed = 10; scale = 4 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 45)  { SetupRandomPalette();                     speed = 8; scale = 15 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 50)  { SetupRandomPalette();                     speed = 25; scale = 6 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 55)  { currentPalette = RainbowStripeColors_p;   speed = 8; scale = 4 * scaleFactor; colorLoop = 1; }
   }
 }
 
