@@ -7,48 +7,12 @@
 #define COLOR_ORDER BRG // GRB for WS2812, BRG for WS2811
 #define NUM_LEDS 100
 
-// This example combines two features of FastLED to produce a remarkable range of
-// effects from a relatively small amount of code.  This example combines FastLED's 
-// color palette lookup functions with FastLED's Perlin/simplex noise generator, and
-// the combination is extremely powerful.
-//
-// You might want to look at the "ColorPalette" and "Noise" examples separately
-// if this example code seems daunting.
-//
-// 
-// The basic setup here is that for each frame, we generate a new array of 
-// 'noise' data, and then map it onto the LED matrix through a color palette.
-//
-// Periodically, the color palette is changed, and new noise-generation parameters
-// are chosen at the same time.  In this example, specific noise-generation
-// values have been selected to match the given color palettes; some are faster, 
-// or slower, or larger, or smaller than others, but there's no reason these 
-// parameters can't be freely mixed-and-matched.
-//
-// In addition, this example includes some fast automatic 'data smoothing' at 
-// lower noise speeds to help produce smoother animations in those cases.
-//
-// The FastLED built-in color palettes (Forest, Clouds, Lava, Ocean, Party) are
-// used, as well as some 'hand-defined' ones, and some proceedurally generated
-// palettes.
-
-
 // The leds
 CRGB leds[NUM_LEDS];
 
 // The 8 bit version of our coordinates
 static double x;
 static double z;
-
-// We're using the x/y dimensions to map to the x/y pixels on the matrix.  We'll
-// use the z-axis for "time".  speed determines how fast time moves forward.  Try
-// 1 for a very slow moving effect, or 60 for something that ends up looking like
-// water.
-
-// Scale determines how far apart the pixels in our noise matrix are.  Try
-// changing these values around to see how it affects the motion of the display.  The
-// higher the value of scale, the more "zoomed out" the noise iwll be.  A value
-// of 1 will be so zoomed in, you'll mostly see solid colors.
 
 double scale = 15; // scale is set dynamically once we've started up
 double scaleFactor = 2; 
@@ -87,13 +51,13 @@ void mapCoordToColor() {
     
     uint16_t xoffset = i * scale;
     
-    uint16_t index = inoise8(x + xoffset, z);
+    uint8_t index = inoise8(x + xoffset, z);
 //
 //    uint8_t index = inoise8(x + height, y + radius, xoffset);
 //    uint8_t bri = 220; // another random point for brightness
 
 //    uint8_t index = inoise8(x + xoffset, y + yoffset z);
-    uint16_t bri = inoise8(x + xoffset*5, z + xoffset); // another random point for brightness
+    uint8_t bri = inoise8(x + xoffset*5, z + xoffset); // another random point for brightness
 
 //    if( dataSmoothing ) {
 //      uint8_t olddata = inoise8(x + xoffset - speed / 8,z-speed);
@@ -140,20 +104,7 @@ void loop() {
 //   delay(20);
 }
 
-
-
-// There are several different palettes of colors demonstrated here.
-//
-// FastLED provides several 'preset' palettes: RainbowColors_p, RainbowStripeColors_p,
-// OceanColors_p, CloudColors_p, LavaColors_p, ForestColors_p, and PartyColors_p.
-//
-// Additionally, you can manually define your own color palettes, or you can write
-// code that creates color palettes on the fly.
-
-// 1 = 5 sec per palette
-// 2 = 10 sec per palette
-// etc
-#define HOLD_PALETTES_X_TIMES_AS_LONG 10
+#define HOLD_PALETTES_X_TIMES_AS_LONG 8
 
 void ChangePaletteAndSettingsPeriodically()
 {
@@ -162,18 +113,18 @@ void ChangePaletteAndSettingsPeriodically()
   
   if( lastSecond != secondHand) {
     lastSecond = secondHand;
-    if( secondHand == 0)  { currentPalette = LavaColors_p;            speed =  8 * speedFactor; scale = 7 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 5)  { SetupBlackAndWhiteStripedPalette();       speed = 7 * speedFactor; scale = 5 * scaleFactor; colorLoop = 1; }
-    if( secondHand ==  15)  { SetupPurpleAndGreenPalette();             speed = 4 * speedFactor; scale = 5 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 0)  { currentPalette = LavaColors_p;            speed =  7 * speedFactor; scale = 7 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 5)  { SetupBlackAndWhiteStripedPalette();       speed = 35 * speedFactor; scale = 5 * scaleFactor; colorLoop = 1; }
+    if( secondHand ==  10)  { SetupPurpleAndGreenPalette();             speed = 1 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
 //    if( secondHand == 15)  { currentPalette = ForestColors_p;          speed =  3; scale = 8 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 20)  { currentPalette = CloudColors_p;           speed =  5 * speedFactor; scale = 6 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 25)  { currentPalette = RainbowColors_p;         speed = 9 * speedFactor; scale = 5 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 30)  { currentPalette = OceanColors_p;           speed = 10 * speedFactor; scale = 12 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 35)  { currentPalette = PartyColors_p;           speed = 8 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 40)  { SetupRandomPalette();                     speed = 10 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 45)  { SetupRandomPalette();                     speed = 8 * speedFactor; scale = 15 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 20)  { currentPalette = CloudColors_p;           speed =  8 * speedFactor; scale = 7 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 25)  { currentPalette = RainbowColors_p;         speed = 15 * speedFactor; scale = 5 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 30)  { currentPalette = OceanColors_p;           speed = 20 * speedFactor; scale = 25 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 35)  { currentPalette = PartyColors_p;           speed = 15 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 40)  { SetupRandomPalette();                     speed = 10 * speedFactor; scale = 7 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 45)  { SetupRandomPalette();                     speed = 7 * speedFactor; scale = 15 * scaleFactor; colorLoop = 1; }
     if( secondHand == 50)  { SetupRandomPalette();                     speed = 25 * speedFactor; scale = 6 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 55)  { currentPalette = RainbowStripeColors_p;   speed = 8 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 55)  { currentPalette = RainbowStripeColors_p;   speed = 12 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
   }
 }
 
