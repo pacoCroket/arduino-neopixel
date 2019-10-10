@@ -6,9 +6,7 @@
 #define LED_TYPE    WS2812
 #define COLOR_ORDER GRB
 #define NUM_SLICES 12
-//#define NUM_SLICES 7
 #define NUM_LEDS 159
-#define NUM_SKIP_LEDS 5
 
 // each LED has 3 coordinates, [radius, height, angle]
 
@@ -49,16 +47,17 @@ static uint8_t ledsArray[NUM_LEDS][4]; // Populated in setup [x, y, z, theta]
 CRGB leds[NUM_LEDS];
 
 // The 8 bit version of our coordinates
-static uint16_t x;
-static uint16_t y;
-static uint16_t z;
+static double x;
+static double y;
+static double z;
 static uint8_t theta0;
 
 // We're using the x/y dimensions to map to the x/y pixels on the matrix.  We'll
 // use the z-axis for "time".  speed determines how fast time moves forward.  Try
 // 1 for a very slow moving effect, or 60 for something that ends up looking like
 // water.
-uint8_t speed = 20; // speed is set dynamically once we've started up
+double speed = 20; // speed is set dynamically once we've started up
+double speedFactor = 0.3; 
 
 // Scale determines how far apart the pixels in our noise matrix are.  Try
 // changing these values around to see how it affects the motion of the display.  The
@@ -66,8 +65,7 @@ uint8_t speed = 20; // speed is set dynamically once we've started up
 // of 1 will be so zoomed in, you'll mostly see solid colors.
 
 double scale = 15; // scale is set dynamically once we've started up
-double scaleFactor = 0.2; 
-uint8_t interval = 10; // spaxe between slices
+double scaleFactor = 1; 
 
 CRGBPalette16 currentPalette( PartyColors_p );
 uint8_t       colorLoop = 1;
@@ -116,30 +114,29 @@ void mapCoordToColor() {
   // from frame-to-frame.  In order to reduce this, we can do some fast data-smoothing.
   // The amount of data smoothing we're doing depends on "speed".
 
-  static uint8_t ihue=0;
-    
-  uint8_t dataSmoothing = 0;
+  static uint16_t ihue=0;
+  uint16_t dataSmoothing = 0;
   if( speed < 50) {
     dataSmoothing = 200 - (speed * 4);
   }
 
-  for (uint8_t i = 0; i < NUM_LEDS; i++) {
+  for (int i = 0; i < NUM_LEDS; i++) {
     // first value is the radius
-    uint8_t xoffset = ledsArray[i][0];
-    uint8_t yoffset = ledsArray[i][1];
-    uint8_t zoffset = ledsArray[i][2];
+    uint16_t xoffset = ledsArray[i][0] * scale;
+    uint16_t yoffset = ledsArray[i][1] * scale;
+    uint16_t zoffset = ledsArray[i][2] * scale;
     
-    uint8_t index = inoise8(x + xoffset, y + yoffset, z + zoffset);
+    uint16_t index = inoise16(x + xoffset, y + yoffset, z + zoffset);
 //
 //    uint8_t index = inoise8(x + height, y + radius, xoffset);
 //    uint8_t bri = 220; // another random point for brightness
 
 //    uint8_t index = inoise8(x + xoffset, y + yoffset z);
-    uint8_t bri = inoise8(x + yoffset, y + xoffset, z + zoffset); // another random point for brightness
+    uint16_t bri = inoise16(x + yoffset, y + xoffset, z + zoffset); // another random point for brightness
 
     if( dataSmoothing ) {
-      uint8_t olddata = inoise8(x + xoffset - speed / 8,y + yoffset + speed / 16,z-speed);
-      uint8_t newdata = scale8( olddata, dataSmoothing) + scale8( index, 256 - dataSmoothing);
+      uint16_t olddata = inoise16(x + xoffset - speed / 8,y + yoffset + speed / 16,z-speed);
+      uint16_t newdata = scale16( olddata, dataSmoothing) + scale16( index, 256 - dataSmoothing);
       index = newdata;
     }
 
@@ -150,11 +147,11 @@ void mapCoordToColor() {
 
       // brighten up, as the color palette itself often contains the 
       // light/dark dynamic range desired
-//      if( bri > 170 ) {
-//        bri = 255;
-//      } else {
+      if( bri > 180 ) {
+        bri = 220;
+      } else {
         bri = dim8_raw( bri );
-//      }
+      }
 
     CRGB color = ColorFromPalette( currentPalette, index, bri);
     leds[i] = color;
@@ -216,7 +213,7 @@ void sameAngle() {
 // 1 = 5 sec per palette
 // 2 = 10 sec per palette
 // etc
-#define HOLD_PALETTES_X_TIMES_AS_LONG 5
+#define HOLD_PALETTES_X_TIMES_AS_LONG 7
 
 void ChangePaletteAndSettingsPeriodically()
 {
@@ -225,18 +222,19 @@ void ChangePaletteAndSettingsPeriodically()
   
   if( lastSecond != secondHand) {
     lastSecond = secondHand;
-    if( secondHand == 0)  { currentPalette = LavaColors_p;            speed =  8; scale = 7 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 5)  { SetupBlackAndWhiteStripedPalette();       speed = 7; scale = 5 * scaleFactor; colorLoop = 1; }
-    if( secondHand ==  10)  { SetupPurpleAndGreenPalette();             speed = 4; scale = 5 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 0)  { currentPalette = LavaColors_p;            speed =  7 * speedFactor; scale = 7 * scaleFactor; colorLoop = 0; }
+    if( secondHand == 5)  { SetupBlackAndWhiteStripedPalette();       speed = 9 * speedFactor; scale = 5 * scaleFactor; colorLoop = 1; }
+    if( secondHand ==  10)  { SetupPurpleAndGreenPalette();             speed = 4 * speedFactor; scale = 5 * scaleFactor; colorLoop = 1; }
 //    if( secondHand == 15)  { currentPalette = ForestColors_p;          speed =  3; scale = 8 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 20)  { currentPalette = CloudColors_p;           speed =  5; scale = 6 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 25)  { currentPalette = RainbowColors_p;         speed = 9; scale = 5 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 30)  { currentPalette = OceanColors_p;           speed = 10; scale = 12 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 35)  { currentPalette = PartyColors_p;           speed = 8; scale = 4 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 40)  { SetupRandomPalette();                     speed = 10; scale = 4 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 45)  { SetupRandomPalette();                     speed = 8; scale = 15 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 50)  { SetupRandomPalette();                     speed = 25; scale = 6 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 55)  { currentPalette = RainbowStripeColors_p;   speed = 8; scale = 4 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 20)  { currentPalette = CloudColors_p;           speed =  5 * speedFactor; scale = 6 * scaleFactor; colorLoop = 0; }
+    if( secondHand == 25)  { currentPalette = RainbowColors_p;         speed = 9 * speedFactor; scale = 5 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 30)  { currentPalette = OceanColors_p;           speed = 10 * speedFactor; scale = 12 * scaleFactor; colorLoop = 0; }
+    if( secondHand == 35)  { currentPalette = PartyColors_p;           speed = 8 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 40)  { SetupRandomPalette();                     speed = 4 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 45)  { SetupRandomPalette();                     speed = 8 * speedFactor; scale = 15 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 50)  { SetupRandomPalette();                     speed = 25 * speedFactor; scale = 6 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 55)  { currentPalette = RainbowStripeColors_p;   speed = 8 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
+  }
 }
 
 // This function generates a random palette that's a gradient

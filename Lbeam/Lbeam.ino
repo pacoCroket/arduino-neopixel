@@ -4,16 +4,8 @@
 #define LED_PIN     3
 #define BRIGHTNESS  250
 #define LED_TYPE    WS2812
-#define COLOR_ORDER GRB
-#define NUM_LEDS 61
-
-// the box is 29 x 24 x 38 cm
-// store leds in x, y, z, cordinates
-const PROGMEM int ledsArray[NUM_LEDS][3] = {{29, 20, 4}, {29, 19, 7}, {29, 18, 10}, {29, 17, 13}, {29, 6, 23}, {29, 4, 21}, {29, 2, 19}, {20, 0, 10}, {19, -1, 10}, {19, -5, 10}, {19, -9, 10}, {17, -9, 10}, {17, -5, 10}, {17, -1, 10}, {14, 0, 10}, {17, 0, 23}, {18, 0, 25}, {19, 0, 27},
-{25, 0, 37}, {27, 2, 38}, {29, 4, 37}, {21, 16, 38}, {19, 19, 38}, {17, 23, 38}, {15, 24, 37}, {13, 24, 35}, 
-{1, 24, 36}, {0, 22, 37}, {1, 20, 38}, {6, 6, 38}, {2, 6, 38}, {0, 5, 36}, {0, 12, 26}, {-3, 12, 25}, {-7, 12, 24}, {-7, 12, 23}, {-3, 12, 22}, {0, 12, 21},
-{0, 5, 11}, {0, 3, 8}, {1, 1, 6}, {6, 5, 0}, {9, 5, 0}, {12, 5, 0}, {15, 22, 0}, {12, 22, 0}, {9, 22, 0}, {0, 21, 10}, {1, 24, 12}, {3, 24, 14},
-{6, 26, 20}, {13, 30, 18}, {14, 30, 16}, {17, 26, 14}, {26, 24, 22}, {29, 26, 22}, {31, 29, 22}, {32, 29, 22}, {30, 24, 22}, {29, 22, 22}};
+#define COLOR_ORDER BRG // GRB for WS2812, BRG for WS2811
+#define NUM_LEDS 100
 
 // This example combines two features of FastLED to produce a remarkable range of
 // effects from a relatively small amount of code.  This example combines FastLED's 
@@ -45,16 +37,13 @@ const PROGMEM int ledsArray[NUM_LEDS][3] = {{29, 20, 4}, {29, 19, 7}, {29, 18, 1
 CRGB leds[NUM_LEDS];
 
 // The 8 bit version of our coordinates
-static uint16_t x;
-static uint16_t y;
-static uint16_t z;
-static uint8_t theta0;
+static double x;
+static double z;
 
 // We're using the x/y dimensions to map to the x/y pixels on the matrix.  We'll
 // use the z-axis for "time".  speed determines how fast time moves forward.  Try
 // 1 for a very slow moving effect, or 60 for something that ends up looking like
 // water.
-uint8_t speed = 20; // speed is set dynamically once we've started up
 
 // Scale determines how far apart the pixels in our noise matrix are.  Try
 // changing these values around to see how it affects the motion of the display.  The
@@ -63,6 +52,8 @@ uint8_t speed = 20; // speed is set dynamically once we've started up
 
 double scale = 15; // scale is set dynamically once we've started up
 double scaleFactor = 2; 
+double speed = 20; // speed is set dynamically once we've started up
+double speedFactor = 0.3; 
 
 CRGBPalette16 currentPalette( PartyColors_p );
 uint8_t       colorLoop = 1;
@@ -75,7 +66,6 @@ void setup() {
 
   // Initialize our coordinates to some random values
   x = random8();
-  y = random8();
   z = random8();
 }
 
@@ -92,26 +82,24 @@ void mapCoordToColor() {
     dataSmoothing = 200 - (speed * 4);
   }
 
-  for (uint8_t i = 0; i < NUM_LEDS; i++) {
+  for (int i = 0; i < NUM_LEDS; i++) {
     // first value is the radius
     
-    uint8_t xoffset = pgm_read_byte(&(ledsArray[i][0])) * scale;
-    uint8_t yoffset = pgm_read_byte(&(ledsArray[i][1])) * scale;
-    uint8_t zoffset = pgm_read_byte(&(ledsArray[i][2])) * scale;
+    uint16_t xoffset = i * scale;
     
-    uint8_t index = inoise8(x + xoffset, y + yoffset, z + zoffset);
+    uint16_t index = inoise8(x + xoffset, z);
 //
 //    uint8_t index = inoise8(x + height, y + radius, xoffset);
 //    uint8_t bri = 220; // another random point for brightness
 
 //    uint8_t index = inoise8(x + xoffset, y + yoffset z);
-    uint8_t bri = inoise8(x + yoffset, y + xoffset, z + zoffset); // another random point for brightness
+    uint16_t bri = inoise8(x + xoffset*5, z + xoffset); // another random point for brightness
 
-    if( dataSmoothing ) {
-      uint8_t olddata = inoise8(x + xoffset - speed / 8,y + yoffset + speed / 16,z-speed);
-      uint8_t newdata = scale8( olddata, dataSmoothing) + scale8( index, 256 - dataSmoothing);
-      index = newdata;
-    }
+//    if( dataSmoothing ) {
+//      uint8_t olddata = inoise8(x + xoffset - speed / 8,z-speed);
+//      uint8_t newdata = scale8( olddata, dataSmoothing) + scale8( index, 256 - dataSmoothing);
+//      index = newdata;
+//    }
 
     // if this palette is a 'loop', add a slowly-changing base value
       if( colorLoop) { 
@@ -134,7 +122,6 @@ void mapCoordToColor() {
   
   // apply slow drift to X and Y, just for visual variation.
   x += speed / 8;
-  y -= speed / 16;
 
   ihue+=1;
   
@@ -166,7 +153,7 @@ void loop() {
 // 1 = 5 sec per palette
 // 2 = 10 sec per palette
 // etc
-#define HOLD_PALETTES_X_TIMES_AS_LONG 5
+#define HOLD_PALETTES_X_TIMES_AS_LONG 10
 
 void ChangePaletteAndSettingsPeriodically()
 {
@@ -175,18 +162,18 @@ void ChangePaletteAndSettingsPeriodically()
   
   if( lastSecond != secondHand) {
     lastSecond = secondHand;
-    if( secondHand == 0)  { currentPalette = LavaColors_p;            speed =  8; scale = 7 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 5)  { SetupBlackAndWhiteStripedPalette();       speed = 7; scale = 5 * scaleFactor; colorLoop = 1; }
-    if( secondHand ==  10)  { SetupPurpleAndGreenPalette();             speed = 4; scale = 5 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 0)  { currentPalette = LavaColors_p;            speed =  8 * speedFactor; scale = 7 * scaleFactor; colorLoop = 0; }
+    if( secondHand == 5)  { SetupBlackAndWhiteStripedPalette();       speed = 7 * speedFactor; scale = 5 * scaleFactor; colorLoop = 1; }
+    if( secondHand ==  15)  { SetupPurpleAndGreenPalette();             speed = 4 * speedFactor; scale = 5 * scaleFactor; colorLoop = 1; }
 //    if( secondHand == 15)  { currentPalette = ForestColors_p;          speed =  3; scale = 8 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 20)  { currentPalette = CloudColors_p;           speed =  5; scale = 6 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 25)  { currentPalette = RainbowColors_p;         speed = 9; scale = 5 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 30)  { currentPalette = OceanColors_p;           speed = 10; scale = 12 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 35)  { currentPalette = PartyColors_p;           speed = 8; scale = 4 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 40)  { SetupRandomPalette();                     speed = 10; scale = 4 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 45)  { SetupRandomPalette();                     speed = 8; scale = 15 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 50)  { SetupRandomPalette();                     speed = 25; scale = 6 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 55)  { currentPalette = RainbowStripeColors_p;   speed = 8; scale = 4 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 20)  { currentPalette = CloudColors_p;           speed =  5 * speedFactor; scale = 6 * scaleFactor; colorLoop = 0; }
+    if( secondHand == 25)  { currentPalette = RainbowColors_p;         speed = 9 * speedFactor; scale = 5 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 30)  { currentPalette = OceanColors_p;           speed = 10 * speedFactor; scale = 12 * scaleFactor; colorLoop = 0; }
+    if( secondHand == 35)  { currentPalette = PartyColors_p;           speed = 8 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 40)  { SetupRandomPalette();                     speed = 10 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 45)  { SetupRandomPalette();                     speed = 8 * speedFactor; scale = 15 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 50)  { SetupRandomPalette();                     speed = 25 * speedFactor; scale = 6 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 55)  { currentPalette = RainbowStripeColors_p;   speed = 8 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
   }
 }
 
