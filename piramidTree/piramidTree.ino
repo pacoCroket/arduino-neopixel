@@ -1,11 +1,12 @@
 #include <FastLED.h>
 
 // LED
-#define LED_PIN     3
+#define LED_PIN1     3
+#define LED_PIN2     5
 #define BRIGHTNESS  180
-#define LED_TYPE    WS2812
-#define COLOR_ORDER BRG // GRB for WS2812, BRG for WS2811
-#define NUM_LEDS 100
+#define LED_TYPE    WS2812B
+#define COLOR_ORDER GRB // GRB for WS2812, BRG for WS2811
+#define NUM_LEDS 300
 
 // The leds
 CRGB leds[NUM_LEDS];
@@ -25,7 +26,8 @@ CRGBPalette16 currentPalette( LavaColors_p );
 void setup() {
 //  Serial.begin(9600);
   
-  LEDS.addLeds<LED_TYPE,LED_PIN,COLOR_ORDER>(leds,NUM_LEDS);
+  LEDS.addLeds<LED_TYPE,LED_PIN1,COLOR_ORDER>(leds,NUM_LEDS);
+  LEDS.addLeds<LED_TYPE,LED_PIN2,COLOR_ORDER>(leds,NUM_LEDS);
   LEDS.setBrightness(BRIGHTNESS);
 
   // Initialize our coordinates to some random values

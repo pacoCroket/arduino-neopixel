@@ -2,8 +2,8 @@
 
 // LED
 #define LED_PIN     3
-#define BRIGHTNESS  250
-#define LED_TYPE    WS2812
+#define BRIGHTNESS  255
+#define LED_TYPE    WS2812B
 #define COLOR_ORDER GRB
 #define NUM_LEDS 61
 

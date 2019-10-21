@@ -34,6 +34,9 @@ uint8_t       colorLoop = 1;
 
 CRGBPalette16 currentPalette( LavaColors_p );
 
+bool initSync = true;
+static uint8_t initSeconds = 5;
+
 void setup() {
 //  Serial.begin(9600);
   
@@ -46,8 +49,8 @@ void setup() {
   z = random8();
   theta0 = random8();
 
+  ChangePaletteAndSettingsPeriodically();
   generateCoords();
-  currentPalette = LavaColors_p ;
 }
 
 void generateCoords() {
@@ -64,8 +67,8 @@ void generateCoords() {
           theta = map(i, zeroPlane[j][0], zeroPlane[j+1][0], 128, 255);          
         }
 
-        ledsArray[i][0] = r*cos8(theta)-128; // cos8() has range [0-255]
-        ledsArray[i][1] = r*sin8(theta)-128;
+        ledsArray[i][0] = r*(cos8(theta)-127); // cos8() has range [0-255]
+        ledsArray[i][1] = r*(sin8(theta)-127);
         ledsArray[i][2] = h;
         ledsArray[i][3] = theta;
         break;
@@ -171,7 +174,7 @@ void sameAngle() {
 void ChangePaletteAndSettingsPeriodically()
 {
   uint8_t secondHand = ((millis() / 1000) / HOLD_PALETTES_X_TIMES_AS_LONG) % 60;
-  static uint8_t lastSecond = 0;
+  static uint8_t lastSecond = 99;
   
   if( lastSecond != secondHand) {
     lastSecond = secondHand;
