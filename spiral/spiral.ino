@@ -10,7 +10,6 @@
 // The leds
 CRGB leds[NUM_LEDS];
 
-// The 8 bit version of our coordinates
 static double x;
 static double z;
 
@@ -61,13 +60,13 @@ void mapCoordToColor() {
 //    uint8_t bri = 220; // another random point for brightness
 
 //    uint8_t index = inoise8(x + xoffset, y + yoffset z);
-    uint8_t bri = inoise8(z, x + xoffset); // another random point for brightness
+    uint8_t bri = inoise8(x, z + xoffset); // another random point for brightness
 
-//    if( dataSmoothing ) {
-//      uint8_t olddata = inoise8(x + xoffset - speed / 8,z-speed);
-//      uint8_t newdata = scale8( olddata, dataSmoothing) + scale8( index, 256 - dataSmoothing);
-//      index = newdata;
-//    }
+   if( dataSmoothing ) {
+     uint8_t olddata = inoise8(x + xoffset - speed / 8,z-speed);
+     uint8_t newdata = scale8( olddata, dataSmoothing) + scale8( index, 256 - dataSmoothing);
+     index = newdata;
+   }
 
     // if this palette is a 'loop', add a slowly-changing base value
       if( colorLoop) { 
@@ -135,11 +134,6 @@ void ChangePaletteAndSettingsPeriodically()
   }
 }
 
-// This function generates a random palette that's a gradient
-// between four different colors.  The first is a dim hue, the second is 
-// a bright hue, the third is a bright pastel, and the last is 
-// another bright hue.  This gives some visual bright/dark variation
-// which is more interesting than just a gradient of different hues.
 void SetupRandomPalette()
 {
   targetPalette = CRGBPalette16( 
@@ -149,10 +143,7 @@ void SetupRandomPalette()
                       CHSV( random8(), 255, 255)); 
 }
 
-// This function sets up a palette of black and white stripes,
-// using code.  Since the palette is effectively an array of
-// sixteen CRGB colors, the various fill_* functions can be used
-// to set them up.
+
 void SetupBlackAndWhiteStripedPalette()
 {
   // 'black out' all 16 palette entries...
