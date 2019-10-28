@@ -2,10 +2,11 @@
 
 // LED
 #define LED_PIN     3
-#define BRIGHTNESS  180
+#define BRIGHTNESS  255
 #define LED_TYPE    WS2811
 #define COLOR_ORDER BRG // GRB for WS2812, BRG for WS2811
 #define NUM_LEDS 100
+#define BUTTON_PIN 2
 
 // The leds
 CRGB leds[NUM_LEDS];
@@ -25,6 +26,13 @@ uint8_t countBlend = 0;
 CRGBPalette16 targetPalette( LavaColors_p );
 CRGBPalette16 currentPalette( LavaColors_p );
 
+boolean buttonState = HIGH;
+boolean prevButtonState = HIGH;
+uint8_t pressCount = 0;
+unsigned long lastStatusSwitch = 999999;
+uint8_t briScale = 200;
+boolean isSwitchingPalette = false;
+
 void setup() {
 //  Serial.begin(9600);
   
@@ -34,14 +42,46 @@ void setup() {
   // Initialize our coordinates to some random values
   x = random8();
   z = random8();
+
+  // initialize the pushbutton pin as an input:
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
+}
+
+void handleButton() {
+  buttonState = digitalRead(BUTTON_PIN);
+
+  if (buttonState != prevButtonState) {
+    pressCount++;
+    
+    // button released
+    if (pressCount % 2 == 0) {
+      // change pallete if pressed and released within 1 sec
+      if (millis() - lastStatusSwitch < 1000) {
+        isSwitchingPalette = !isSwitchingPalette;
+      }
+
+    // button pressed
+    } 
+    // else {}
+    // record last state change
+    lastStatusSwitch = millis();
+  } 
+  
+  if (buttonState == LOW && millis()-lastStatusSwitch >= 1000) {
+    // increase or decrease brightness
+    if (pressCount % 4 == 1 && briScale < 255) {
+      briScale++;
+    } else if (pressCount % 4 == 3 && briScale > 0) {  
+      briScale--;
+    }
+
+  }
+
+  prevButtonState = buttonState;
 }
 
 
 void mapCoordToColor() {
-  // If we're runing at a low "speed", some 8-bit artifacts become visible
-  // from frame-to-frame.  In order to reduce this, we can do some fast data-smoothing.
-  // The amount of data smoothing we're doing depends on "speed".
-
   static uint8_t ihue=0;
     
   uint8_t dataSmoothing = 0;
@@ -55,46 +95,35 @@ void mapCoordToColor() {
     uint16_t xoffset = i * scale;
     
     uint8_t index = inoise8(x + xoffset, z);
-//
-//    uint8_t index = inoise8(x + height, y + radius, xoffset);
-//    uint8_t bri = 220; // another random point for brightness
-
-//    uint8_t index = inoise8(x + xoffset, y + yoffset z);
     uint8_t bri = inoise8(x, z + xoffset); // another random point for brightness
 
-   if( dataSmoothing ) {
-     uint8_t olddata = inoise8(x + xoffset - speed / 8,z-speed);
-     uint8_t newdata = scale8( olddata, dataSmoothing) + scale8( index, 256 - dataSmoothing);
-     index = newdata;
-   }
+    if( dataSmoothing ) {
+      uint8_t olddata = inoise8(x + xoffset - speed / 8,z-speed);
+      uint8_t newdata = scale8( olddata, dataSmoothing) + scale8( index, 256 - dataSmoothing);
+      index = newdata;
+    }
 
     // if this palette is a 'loop', add a slowly-changing base value
-      if( colorLoop) { 
-        index += ihue;
-      }
+    if( colorLoop) { 
+      index += ihue;
+    }
 
-      // brighten up, as the color palette itself often contains the 
-      // light/dark dynamic range desired
-//      if( bri > 170 ) {
-//        bri = 255;
-//      } else {
-        bri = dim8_raw( bri );
-//      }
+    bri = dim8_raw( scale8(bri, briScale) );
 
     CRGB color = ColorFromPalette( currentPalette, index, bri);
     leds[i] = color;
   }
   
   z += speed/2;
-  
   // apply slow drift to X and Y, just for visual variation.
   x += speed / 8;
 
-  ihue+=1;
-  
+  ihue++;
 }
 
 void loop() {
+  handleButton();
+
   // Periodically choose a new palette, speed, and scale
   ChangePaletteAndSettingsPeriodically();
 
@@ -117,7 +146,7 @@ void ChangePaletteAndSettingsPeriodically()
   uint8_t secondHand = ((millis() / 1000) / HOLD_PALETTES_X_TIMES_AS_LONG) % 60;
   static uint8_t lastSecond = 99;
   
-  if( lastSecond != secondHand) {
+  if( lastSecond != secondHand && isSwitchingPalette) {
     lastSecond = secondHand;
     if( secondHand == 0)  { targetPalette = LavaColors_p;            speed =  7 * speedFactor; scale = 7 * scaleFactor; colorLoop = 0; }
     if( secondHand == 5)  { SetupBlackAndWhiteStripedPalette();       speed = 35 * speedFactor; scale = 5 * scaleFactor; colorLoop = 1; }

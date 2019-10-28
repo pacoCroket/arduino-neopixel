@@ -74,7 +74,7 @@ void mapCoordToColor() {
       // head starts at led 48 
       xCoord = - 2;
     } else if (i >= 24) {
-      xCoord = 47 - i; 
+      xCoord = 48 - i; 
     } else {
       // first stripe
       xCoord = i;

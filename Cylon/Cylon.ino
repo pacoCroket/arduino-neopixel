@@ -1,7 +1,7 @@
 #include <FastLED.h>
 
 // How many leds in your strip?
-#define NUM_LEDS 150 
+#define NUM_LEDS 300 
 #define BRIGHTNESS 150
 
 // For led chips like Neopixels, which have a data line, ground, and power, you just
@@ -17,6 +17,7 @@ CRGB leds[NUM_LEDS];
 int outFrameSpace = 2; // virtual LEDs to add time between waves of color from the sides
 int delayTime = 28;
 boolean forward = true;
+boolean isAutoBrightness = true;
 
 int i = 0;
 static uint8_t hue = 0;
@@ -26,10 +27,15 @@ boolean prevButtonState = HIGH;
 uint8_t hitCount = 0;
 uint8_t briScale = 128;
 uint8_t briStep = 32;
+unsigned long lastStatusSwitch = 999999;
 
 void setup() { 
-  Serial.begin(9600);
-  Serial.println("beggining!");
+	// Serial.begin(9600);
+	// Serial.println("beggining!");
+
+	// initialize the pushbutton pin as an input:
+	pinMode(BUTTON_PIN, INPUT_PULLUP);
+
 	LEDS.addLeds<WS2812,DATA_PIN,RGB>(leds,NUM_LEDS);
 	LEDS.setBrightness(BRIGHTNESS);
 }
@@ -41,7 +47,7 @@ void fadeall() {
 
 
 void loop() { 
-//  handleButton();
+ handleButton();
 
   if (briScale > briStep) {
     leds[i] = CHSV(hue++, 255, dim8_raw( briScale ));
@@ -54,7 +60,7 @@ void loop() {
   } else if (i == 0) {
     forward = true;
     // increase brightness at every complete cycle
-    brightCycle();
+    if(isAutoBrightness) brightCycle();
   }
  
   if (forward) {
@@ -74,18 +80,24 @@ void brightCycle() {
 
 void handleButton() {
   buttonState = digitalRead(BUTTON_PIN);
-  Serial.println(buttonState);
-
-  if (buttonState == LOW) {    
-//     briScale = briScale + briStep;
-  }
   
   // event of button pressed or released
-  if (buttonState != prevButtonState && hitCount == 1) {
-    Serial.print("new button state :");
-    Serial.println(buttonState);
-   briScale = briScale + briStep;
-   hitCount = (hitCount + 1 ) % 2;
+  if (buttonState != prevButtonState) {	  
+   	hitCount++;
+	// button released
+	if (hitCount % 2 == 0 && millis() - lastStatusSwitch < 1000) {
+		isAutoBrightness = !isAutoBrightness;
+	}
+	lastStatusSwitch = millis(); 
+  }
+
+  if (buttonState == LOW && millis()-lastStatusSwitch >= 1000) {
+    // increase or decrease brightness
+    if (hitCount % 4 == 1 && briScale < 255) {
+      briScale++;
+    } else if (hitCount % 4 == 3 && briScale > 0) {  
+      briScale--;
+    }
   }
     
   prevButtonState = buttonState;
