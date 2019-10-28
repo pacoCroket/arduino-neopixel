@@ -3,7 +3,8 @@
         {
             "name": "Win32",
             "includePath": [
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/**",
+                "D:/Libraries/Documents/Arduino/**"
             ],
             "defines": [
                 "_DEBUG",

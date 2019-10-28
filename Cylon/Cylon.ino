@@ -15,85 +15,78 @@
 CRGB leds[NUM_LEDS];
 
 int outFrameSpace = 2; // virtual LEDs to add time between waves of color from the sides
-int delayTime = 22;
+int delayTime = 28;
+boolean forward = true;
+
+int i = 0;
+static uint8_t hue = 0;
 
 boolean buttonState = HIGH;
 boolean prevButtonState = HIGH;
 uint8_t hitCount = 0;
-uint8_t briScale = 100;
+uint8_t briScale = 128;
+uint8_t briStep = 32;
 
 void setup() { 
-//	Serial.begin(57600);
-//	Serial.println("resetting");
+  Serial.begin(9600);
+  Serial.println("beggining!");
 	LEDS.addLeds<WS2812,DATA_PIN,RGB>(leds,NUM_LEDS);
 	LEDS.setBrightness(BRIGHTNESS);
 }
 
 void fadeall() {  
-//  handleButton();
-  for(int i = 0; i < NUM_LEDS; i++) { leds[i].nscale8(250); }
+  for(int i = 0; i < NUM_LEDS; i++) { leds[i].nscale8(252); }
 }
+
+
 
 void loop() { 
-  handleButton();
+//  handleButton();
+
+  if (briScale > briStep) {
+    leds[i] = CHSV(hue++, 255, dim8_raw( briScale ));
+  }
+  FastLED.show(); 
+  fadeall();
+
+  if (i == NUM_LEDS - 1) {
+    forward = false;
+  } else if (i == 0) {
+    forward = true;
+    // increase brightness at every complete cycle
+    brightCycle();
+  }
+ 
+  if (forward) {
+    i++;
+  } else {
+    i--;
+  }
   
-	static uint8_t hue = 0;
-//	Serial.print("x");
-	// First slide the led in one direction
-	for(int i = 0; i < NUM_LEDS; i++) {
-		// Set the i'th led to red 
-		leds[i] = CHSV(hue++, 255, dim8_raw( briScale ));
-		// Show the leds
-		FastLED.show(); 
-		// now that we've shown the leds, reset the i'th led to black
-		// leds[i] = CRGB::Black;
-		fadeall();
-		// Wait a little bit before we loop around and do it again
-		delay(delayTime);
-	}
-//	Serial.print("x");
+  delay(delayTime);
 
-//  for(int i = 0; i < outFrameSpace; i++) {
-//    fadeall();
-//    FastLED.show();
-//    delay(delayTime);
-//  }
-
-	// Now go in the other direction.  
-	for(int i = (NUM_LEDS)-1; i >= 0; i--) {
-		// Set the i'th led to red 
-   
-		leds[i] = CHSV(hue++, 255, dim8_raw( briScale ));
-		// Show the leds
-		FastLED.show();
-		// now that we've shown the leds, reset the i'th led to black
-		// leds[i] = CRGB::Black;
-		fadeall();
-		// Wait a little bit before we loop around and do it again
-		delay(delayTime);
-	}
-
-//   for(int i = 0; i < outFrameSpace; i++) {
-//    fadeall();
-//    FastLED.show();
-//    delay(delayTime);
-//  }
 }
 
-
+void brightCycle() {
+   briScale = briScale + briStep;
+   briScale = constrain(briScale, briStep, 255);
+}
 
 void handleButton() {
   buttonState = digitalRead(BUTTON_PIN);
+  Serial.println(buttonState);
 
   if (buttonState == LOW) {    
-     briScale = (briScale + 30) % 256;
+//     briScale = briScale + briStep;
   }
   
   // event of button pressed or released
-//  if (buttonState != prevButtonState) {
-//     briScale = (briScale + 50) % 256;
-////     hitCount = (hitCount + 1 ) % 4;
-//  }
+  if (buttonState != prevButtonState && hitCount == 1) {
+    Serial.print("new button state :");
+    Serial.println(buttonState);
+   briScale = briScale + briStep;
+   hitCount = (hitCount + 1 ) % 2;
+  }
     
   prevButtonState = buttonState;
 }
