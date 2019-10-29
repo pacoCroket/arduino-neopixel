@@ -20,6 +20,7 @@ boolean forward = true;
 boolean isAutoBrightness = true;
 
 int i = 0;
+int skipAtEnds = 12;
 static uint8_t hue = 0;
 
 boolean buttonState = HIGH;
@@ -57,8 +58,10 @@ void loop() {
 
   if (i == NUM_LEDS - 1) {
     forward = false;
+	endReached();
   } else if (i == 0) {
     forward = true;
+	endReached();
     // increase brightness at every complete cycle
     if(isAutoBrightness) brightCycle();
   }
@@ -71,6 +74,14 @@ void loop() {
   
   delay(delayTime);
 
+}
+
+void endReached() {
+	for (int j = 0; j < skipAtEnds; j++) {
+		FastLED.show(); 	
+		fadeall();
+		delay(delayTime);
+	}
 }
 
 void brightCycle() {
