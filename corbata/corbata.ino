@@ -1,13 +1,11 @@
 #include <FastLED.h>
-#include <MPU6050_tockn.h>
-#include <Wire.h>
 
 // LED
 #define LED_PIN     3
 #define BRIGHTNESS  255
 #define LED_TYPE    WS2812B
 #define COLOR_ORDER GRB
-#define NUM_LEDS 54
+#define NUM_LEDS 50
 
 CRGB leds[NUM_LEDS];
 
@@ -28,24 +26,8 @@ uint8_t countBlend = 0;
 CRGBPalette16 targetPalette( LavaColors_p );
 CRGBPalette16 currentPalette( LavaColors_p );
 
-// motion sensitivity
-MPU6050 mpu6050(Wire);
-float accFactor = 1; // current acceleration, smoothed
-float accThreshold = 2; // threshold to trigger something
-long accLastEvent = 0; // timestamp in millis of last threshold
-float accEventDelay = 1000; // duration of accThreshold event
-
-int angleFactor = 0;
-float angleThreshold = 2; // threshold to trigger something
-long angleLastEvent = 0; // timestamp in millis of last angle change
-float angleEventDelay = 1000; // duration of accThreshold event
-
 void setup() {
 //  Serial.begin(9600);
-
-  Wire.begin();
-  mpu6050.begin();
-  mpu6050.calcGyroOffsets(true);
   
   LEDS.addLeds<LED_TYPE,LED_PIN,COLOR_ORDER>(leds,NUM_LEDS);
   LEDS.setBrightness(BRIGHTNESS);
@@ -68,21 +50,11 @@ void mapCoordToColor() {
   }
 
   for (uint16_t i = 0; i < NUM_LEDS; i++) {
-    if (i >= 50 && i <= 52) {
-      xCoord = 0;
-    } else if (i >= 48) {
-      // head starts at led 48 
-      xCoord = 1;
-    } else if (i >= 24) {
-      xCoord = 48 - i + 3; 
+    if (i >= 25) {
+      xCoord = 50 - i; 
     } else {
       // first stripe
-      xCoord = i + 3;
-    }
-
-    if (xCoord == angleFactor && millis() - angleLastEvent < angleEventDelay) {
-      leds[i] = CHSV( HUE_PURPLE, 255, 255);
-      continue;
+      xCoord = i;
     }
 
     uint16_t xoffset = scale * xCoord;  
@@ -119,9 +91,6 @@ void mapCoordToColor() {
 }
 
 void loop() {
-  mpu6050.update();
-  updateMPUFactors();
-
   ChangePaletteAndSettingsPeriodically();
 
   // run the blend function only every Nth frames
@@ -135,23 +104,6 @@ void loop() {
   LEDS.show();
 //   delay(20);
 }
-
-void updateMPUFactors() {
-  // total acceleration
-  accFactor = 0.9*accFactor + 0.1*pow(pow(mpu6050.getAccX(), 2) + pow(mpu6050.getAccY(), 2) + pow(mpu6050.getAccZ(), 2), 0.5);
-  if (accFactor > accThreshold) {
-    accLastEvent = millis();
-  }
-  // angles
-  int newAngleFactor = (int)(mpu6050.getAngleX() / 180 * 24) + 11; // 11 is middle LED
-  if (newAngleFactor != angleFactor) {
-    angleLastEvent = millis();
-    angleFactor = newAngleFactor;
-    if (angleFactor > 23) angleFactor = 47 - angleFactor; 
-    else if (angleFactor < 0) angleFactor *= -1;
-  }
-}
-
 
 #define HOLD_PALETTES_X_TIMES_AS_LONG 8
 
