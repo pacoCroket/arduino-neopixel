@@ -2,7 +2,7 @@
 
 // LED
 #define LED_PIN     3
-#define BRIGHTNESS  255
+#define BRIGHTNESS  120
 #define LED_TYPE    WS2812B
 #define COLOR_ORDER GRB
 #define NUM_LEDS 50
@@ -14,7 +14,7 @@ static double y;
 static double z;
 
 // for each palette
-double speedFactor = 0.3;
+double speedFactor = 0.2;
 double speed = 6 * speedFactor; // speed is set dynamically once we've started up
 double scaleFactor = 4; 
 double scale = 6 * scaleFactor; // scale is set dynamically once we've started up
@@ -42,7 +42,7 @@ void setup() {
 void mapCoordToColor() {
 
   static uint8_t ihue=0;
-  uint8_t xCoord;
+  int xCoord;
     
   uint8_t dataSmoothing = 0;
   if( speed < 4) {
@@ -51,7 +51,7 @@ void mapCoordToColor() {
 
   for (uint16_t i = 0; i < NUM_LEDS; i++) {
     if (i >= 25) {
-      xCoord = 50 - i; 
+      xCoord = 49 - i; 
     } else {
       // first stripe
       xCoord = i;
@@ -64,7 +64,7 @@ void mapCoordToColor() {
 
 
     if( dataSmoothing ) {
-      uint8_t olddata = inoise8(x + xoffset + speed,z-speed);
+      uint8_t olddata = inoise8(x + xoffset + speed,z-speed/2);
       uint8_t newdata = scale8( olddata, dataSmoothing) + scale8( index, 256 - dataSmoothing);
       index = newdata;
     }
@@ -74,16 +74,14 @@ void mapCoordToColor() {
         index += ihue;
       }
 
-      if( bri > 180 ) { 
-        bri = 220;
-      } else {
-        bri = dim8_raw( bri );
-      }
+//      if (bri > 180) bri = 220;
+
+      bri = dim8_raw( scale8(bri, constrain(70+xCoord*15, 0, 255)));
 
       leds[i] = ColorFromPalette( currentPalette, index, bri);
   }
   
-  z += speed;
+  z += speed/2;
   // apply slow drift to X and Y, just for visual variation.
   x -= speed;
 
@@ -115,7 +113,7 @@ void ChangePaletteAndSettingsPeriodically()
   if( lastSecond != secondHand) {
     lastSecond = secondHand;
     if( secondHand == 0)  { targetPalette = LavaColors_p;            speed =  8 * speedFactor; scale = 7 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 5)  { SetupBlackAndWhiteStripedPalette();       speed = 30 * speedFactor; scale = 14 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 5)  { SetupBlackAndWhiteStripedPalette();       speed = 40 * speedFactor; scale = 14 * scaleFactor; colorLoop = 1; }
     if( secondHand ==  10)  { SetupPurpleAndGreenPalette();             speed = 1 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
     // if( secondHand == 15)  { targetPalette = ForestColors_p;          speed =  3 * speedFactor; scale = 8 * scaleFactor; colorLoop = 0; }
     if( secondHand == 20)  { targetPalette = CloudColors_p;           speed =  4 * speedFactor; scale = 7 * scaleFactor; colorLoop = 0; }
@@ -143,9 +141,9 @@ void SetupBlackAndWhiteStripedPalette()
   // 'black out' all 16 palette entries...
   fill_solid( targetPalette, 16, CRGB::Black);
   // and set every fourth one to white.
-  targetPalette[0] = CRGB::White;
+//  targetPalette[0] = CRGB::White;
 //  targetPalette[8] = CRGB::White;
-  targetPalette[12] = CRGB::White;
+  targetPalette[10] = CRGB::White;
 
 }
 
@@ -162,4 +160,3 @@ void SetupPurpleAndGreenPalette()
     green,  green,  black,  black,
     purple, purple, black,  black );
 }
-
