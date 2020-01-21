@@ -1,25 +1,51 @@
-#include <Bounce2.h>
 #include <FastLED.h>
 
 // LED
-#define LED_PIN     3
+// #define LED_PIN1     3
+#define LED_PIN2     3
 #define BRIGHTNESS  255
-#define LED_TYPE    WS2811
-#define COLOR_ORDER BRG // GRB for WS2812, BRG for WS2811
-#define NUM_LEDS 100
+#define LED_TYPE    WS2812B
+#define COLOR_ORDER GRB // GRB for WS2812, BRG for WS2811
+// #define NUM_LEDS1 240
+#define NUM_LEDS2 42
 #define BUTTON_PIN 2
 
-// The leds
-CRGB leds[NUM_LEDS];
+// CRGB lavaLeds[NUM_LEDS1];
+CRGB cloudLeds[NUM_LEDS2];
 
-static double x;
-static double z;
+// store leds in [x, y] cordinates
+// const PROGMEM uint8_t lavaLedsArray[NUM_LEDS1][2] = {{30, 80}};
+// cloud is 3D
+const PROGMEM uint8_t cloudLedsArray[NUM_LEDS2][3] = {
+{136, 0, 60}, {147, 7, 55}, {158, 15, 60}, //0
+{205, 16, 15}, {221, 17, 22}, {236, 18, 35},
+{181, 78, 120}, {181, 88, 100}, {181, 98, 80}, // 6
+{242, 83, 60}, {255, 95, 60}, {244, 105, 60},
+{153, 120, 0}, {155, 70, 15}, {202, 118, 30}, // 12
+{184, 163, 35}, {184, 174, 43}, {184, 188, 50},
+{130, 170, 75}, {117, 170, 85}, {103, 170, 82}, // 18
+{36, 149, 60}, {23, 165, 45}, {37, 185, 60},
+{34, 129, 55}, {14, 120, 55}, {37, 104, 55}, // 24
+{47, 103, 70}, {44, 94, 85}, {43, 84, 100},
+{2, 35, 60}, {0, 10, 60}, // 30
+{46, 36, 48}, {47, 48, 35}, // 32
+{16, 82, 0}, {53, 91, 15}, {76, 76, 30}, // 34
+{82, 92, 30}, {96, 92, 20}, {108, 93, 10}, // 37
+{80, 16, 35}, {92, 15, 45}}; // 40
 
-double speedFactor = 0.15;
+// static double x1;
+// static double y1;
+// static double z1;
+static double x2;
+static double y2;
+static double z2;
+
+double speedFactor = 0.1;
 double speed = 6 * speedFactor; // speed is set dynamically once we've started up
-double scaleFactor = 2; 
+double scaleFactor = 0.3; 
 double scale = 6 * scaleFactor; // scale is set dynamically once we've started up
-uint8_t       colorLoop = 1;
+double flow = 5;
+uint8_t colorLoop = 1;
 
  // for blending in palettes smoothly
 uint8_t maxChanges = 48;
@@ -27,40 +53,84 @@ uint8_t countBlend = 0;
 CRGBPalette16 targetPalette( LavaColors_p );
 CRGBPalette16 currentPalette( LavaColors_p );
 
-// Instantiate a Bounce object
-Bounce debouncer = Bounce(); 
-
-boolean buttonState = LOW;
-boolean prevButtonState = LOW;
+boolean buttonState = HIGH;
+boolean prevButtonState = HIGH;
 uint8_t pressCount = 0;
 unsigned long lastStatusSwitch = 999999;
-uint8_t briScale = 200;
+uint8_t briScale = 255;
 boolean isSwitchingPalette = true;
 
 void setup() {
 //  Serial.begin(9600);
   
-  LEDS.addLeds<LED_TYPE,LED_PIN,COLOR_ORDER>(leds,NUM_LEDS);
+  // lava LEDs
+  // LEDS.addLeds<LED_TYPE,LED_PIN1,COLOR_ORDER>(lavaLeds,NUM_LEDS1);
+  // cloud LEDs
+  LEDS.addLeds<LED_TYPE,LED_PIN2,COLOR_ORDER>(cloudLeds,NUM_LEDS2);
   LEDS.setBrightness(BRIGHTNESS);
 
   // Initialize our coordinates to some random values
-  x = random8();
-  z = random8();
+  x2 = random8();
+  y2 = random8();
+  z2 = random8();
 
-  // Setup the button with an internal pull-up :
-  pinMode(BUTTON_PIN,INPUT_PULLUP);
+  // initialize the pushbutton pin as an input:
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
+}
 
-  // After setting up the button, setup the Bounce instance :
-  debouncer.attach(BUTTON_PIN);
-  debouncer.interval(10); // interval in ms
+void cloudMapping() {
+    static uint8_t ihue=0;
+
+  for (int i = 0; i < NUM_LEDS2; i++) {
+    // first value is the radius
+    
+    uint16_t xoffset = pgm_read_byte(&(cloudLedsArray[i][0])) * scale;
+    uint16_t yoffset = pgm_read_byte(&(cloudLedsArray[i][1])) * scale;
+    uint16_t zoffset = pgm_read_byte(&(cloudLedsArray[i][2])) * scale;
+    
+    uint8_t index = inoise8(x2 + xoffset, y2 + yoffset, z2 + zoffset);
+    uint8_t bri = inoise8(x2 + zoffset, y2 + xoffset, z2 + yoffset); // another random point for brightness
+
+    // if this palette is a 'loop', add a slowly-changing base value
+    if( colorLoop) { 
+      index += ihue;
+    }
+
+    bri = dim8_raw( scale8(bri, briScale) );
+
+    CRGB color = ColorFromPalette( currentPalette, index, bri);
+    cloudLeds[i] = color;
+  }
+  
+  z2 += speed;
+  
+  // apply slow drift to X and Y, just for visual variation.
+  x2 += speed / 4;
+  y2 -= speed / 8;
+
+  ihue++;
+}
+
+void loop() {
+//   handleButton();
+
+  // Periodically choose a new palette, speed, and scale
+  ChangePaletteAndSettingsPeriodically();
+
+  // run the blend function only every Nth frames
+  if (countBlend == 3) {
+    nblendPaletteTowardPalette(currentPalette, targetPalette, maxChanges);
+    countBlend = 0;
+  }
+  countBlend++;
+
+  cloudMapping();
+  LEDS.show();
+//   delay(20);
 }
 
 void handleButton() {
-    // Update the Bounce instance :
-  debouncer.update();
-
-  // Get the updated value :
-  buttonState = debouncer.read();
+  buttonState = digitalRead(BUTTON_PIN);
 
   if (buttonState != prevButtonState) {
     pressCount++;
@@ -88,66 +158,6 @@ void handleButton() {
     }
 
   }
-
-  prevButtonState = buttonState;
-}
-
-void mapCoordToColor() {
-  static uint8_t ihue=0;
-    
-  uint8_t dataSmoothing = 0;
-  if( speed < 4) {
-    dataSmoothing = 220 - (speed * 4);
-  }
-
-  for (int i = 0; i < NUM_LEDS; i++) {
-    // first value is the radius
-    
-    uint16_t xoffset = i * scale;
-    
-    uint8_t index = inoise8(x + xoffset, z);
-    uint8_t bri = inoise8(x, z + xoffset); // another random point for brightness
-
-    if( dataSmoothing ) {
-      uint8_t olddata = inoise8(x + xoffset - speed / 8,z-speed);
-      uint8_t newdata = scale8( olddata, dataSmoothing) + scale8( index, 256 - dataSmoothing);
-      index = newdata;
-    }
-
-    // if this palette is a 'loop', add a slowly-changing base value
-    if( colorLoop) { 
-      index += ihue;
-    }
-
-    bri = dim8_raw( scale8(bri, briScale) );
-
-    CRGB color = ColorFromPalette( currentPalette, index, bri);
-    leds[i] = color;
-  }
-  
-  z += speed/2;
-  // apply slow drift to X and Y, just for visual variation.
-  x += speed / 8;
-
-  ihue++;
-}
-
-void loop() {
-  handleButton();
-
-  // Periodically choose a new palette, speed, and scale
-  ChangePaletteAndSettingsPeriodically();
-
-  // run the blend function only every Nth frames
-  if (countBlend == 5) {
-    nblendPaletteTowardPalette(currentPalette, targetPalette, maxChanges);
-    countBlend = 0;
-  }
-  countBlend++;
-
-  mapCoordToColor();
-  LEDS.show();
-//   delay(20);
 }
 
 #define HOLD_PALETTES_X_TIMES_AS_LONG 8

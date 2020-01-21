@@ -1,23 +1,46 @@
-#include <Bounce2.h>
 #include <FastLED.h>
 
 // LED
 #define LED_PIN     3
 #define BRIGHTNESS  255
-#define LED_TYPE    WS2811
-#define COLOR_ORDER BRG // GRB for WS2812, BRG for WS2811
-#define NUM_LEDS 100
+#define LED_TYPE    WS2812B
+#define COLOR_ORDER GRB
+#define NUM_LEDS 63
 #define BUTTON_PIN 2
 
+// the box is 29 x 24 x 38 cm
+// store leds in x, y, z, cordinates
+const PROGMEM uint8_t ledsArray[NUM_LEDS][3] = {{30, 80, 10}, {30, 80, 13}, {30, 80, 16}, // 0, 1, 2
+{9, 80, 16}, {7, 80, 14}, {5, 80, 12},
+{4, 60, 20}, {6, 60, 22}, {9, 60, 24},
+{10, 37, 24}, {8, 36, 22}, {6, 32, 20},
+{4, 22, 16}, {5, 22, 20}, {9, 22, 20}, 
+{28, 10, 20}, {29, 8, 17}, {30, 6, 14},
+{50, 9, 19}, {52, 9, 17}, {54, 9, 15}, 
+{55, 30, 15}, {53, 30, 13}, {51, 30, 14},
+{51, 55, 14}, {53, 55, 12}, {55, 55, 10},
+{52, 70, 10}, {54, 73, 8}, {52, 70, 6},
+{28, 70, 2}, {25, 70, 2}, {22, 70, 2},
+{10, 60, 3}, {8, 58, 2}, {10, 56, 1},
+{11, 40, 0}, {14, 40, 1}, {17, 40, 2},
+{40, 49, 8}, {40, 46, 8}, {40, 43, 8},
+{53, 26, 8}, {53, 23, 8}, {53, 20, 8},
+{40, 10, 8}, {43, 10, 7}, {46, 10, 8},
+{25, 23, 10}, {25, 26, 10}, {25, 29, 10},
+{10, 18, 2}, {10, 15, 2}, {10, 12, 2},
+{10, 1, 13}, {10, 3, 16}, {10, 5, 19},
+{32, 30, 22}, {31, 33, 21}, {30, 36, 20},
+{40, 60, 18}, {40, 63, 19}, {40, 66, 20}}; // 60, 61, 62
 // The leds
 CRGB leds[NUM_LEDS];
 
 static double x;
+static double y;
 static double z;
 
-double speedFactor = 0.15;
+double speedFactor = 0.1;
 double speed = 6 * speedFactor; // speed is set dynamically once we've started up
-double scaleFactor = 2; 
+double scaleFactor = 0.4; 
 double scale = 6 * scaleFactor; // scale is set dynamically once we've started up
 uint8_t       colorLoop = 1;
 
@@ -27,14 +50,11 @@ uint8_t countBlend = 0;
 CRGBPalette16 targetPalette( LavaColors_p );
 CRGBPalette16 currentPalette( LavaColors_p );
 
-// Instantiate a Bounce object
-Bounce debouncer = Bounce(); 
-
-boolean buttonState = LOW;
-boolean prevButtonState = LOW;
+boolean buttonState = HIGH;
+boolean prevButtonState = HIGH;
 uint8_t pressCount = 0;
 unsigned long lastStatusSwitch = 999999;
-uint8_t briScale = 200;
+uint8_t briScale = 255;
 boolean isSwitchingPalette = true;
 
 void setup() {
@@ -45,22 +65,79 @@ void setup() {
 
   // Initialize our coordinates to some random values
   x = random8();
+  y = random8();
   z = random8();
-
-  // Setup the button with an internal pull-up :
-  pinMode(BUTTON_PIN,INPUT_PULLUP);
-
-  // After setting up the button, setup the Bounce instance :
-  debouncer.attach(BUTTON_PIN);
-  debouncer.interval(10); // interval in ms
 }
 
-void handleButton() {
-    // Update the Bounce instance :
-  debouncer.update();
+void mapCoordToColor() {
+  static uint8_t ihue=0;
+    
+  uint8_t dataSmoothing = 0;
+  // TODO what speed?
+  if( speed < 2) {
+    dataSmoothing = 200 - (speed * 4);
+  }
 
-  // Get the updated value :
-  buttonState = debouncer.read();
+  for (uint8_t i = 0; i < NUM_LEDS; i++) {
+    // first value is the radius
+    
+    uint16_t xoffset = pgm_read_byte(&(ledsArray[i][0])) * scale;
+    uint16_t yoffset = pgm_read_byte(&(ledsArray[i][1])) * scale;
+    uint16_t zoffset = pgm_read_byte(&(ledsArray[i][2])) * scale;
+    
+    uint8_t index = inoise8(x + xoffset, y + yoffset, z + zoffset);
+    uint8_t bri = inoise8(x + yoffset, y + xoffset, z + zoffset); // another random point for brightness
+
+    if( dataSmoothing ) {
+        uint8_t oldIndex = inoise8(x + xoffset - speed/2, y + yoffset + speed/4, z-speed);
+        uint8_t oldBri = inoise8(x + yoffset - speed/2, y + xoffset + speed/4, z-speed);
+        index = scale8( oldIndex, dataSmoothing) + scale8( oldIndex, 256 - dataSmoothing);
+        bri = scale8( oldBri, dataSmoothing) + scale8( oldBri, 256 - dataSmoothing);
+    }
+
+    // if this palette is a 'loop', add a slowly-changing base value
+    if( colorLoop) { 
+      index += ihue;
+    }
+
+    bri = dim8_raw( scale8(bri, briScale) );
+
+    CRGB color = ColorFromPalette( currentPalette, index, bri);
+    leds[i] = color;
+  }
+  
+  z += speed;
+  
+  // apply slow drift to X and Y, just for visual variation.
+  x += speed / 4;
+  y -= speed / 8;
+
+  ihue+=1;
+  
+}
+
+void loop() {
+  // handleButton();
+
+  // Periodically choose a new palette, speed, and scale
+  ChangePaletteAndSettingsPeriodically();
+
+    // run the blend function only every Nth frames
+  if (countBlend == 3) {
+    nblendPaletteTowardPalette(currentPalette, targetPalette, maxChanges);
+    countBlend = 0;
+  }
+  countBlend++;
+
+  mapCoordToColor();
+
+  LEDS.show();
+//   delay(20);
+}
+
+
+void handleButton() {
+  buttonState = digitalRead(BUTTON_PIN);
 
   if (buttonState != prevButtonState) {
     pressCount++;
@@ -90,64 +167,6 @@ void handleButton() {
   }
 
   prevButtonState = buttonState;
-}
-
-void mapCoordToColor() {
-  static uint8_t ihue=0;
-    
-  uint8_t dataSmoothing = 0;
-  if( speed < 4) {
-    dataSmoothing = 220 - (speed * 4);
-  }
-
-  for (int i = 0; i < NUM_LEDS; i++) {
-    // first value is the radius
-    
-    uint16_t xoffset = i * scale;
-    
-    uint8_t index = inoise8(x + xoffset, z);
-    uint8_t bri = inoise8(x, z + xoffset); // another random point for brightness
-
-    if( dataSmoothing ) {
-      uint8_t olddata = inoise8(x + xoffset - speed / 8,z-speed);
-      uint8_t newdata = scale8( olddata, dataSmoothing) + scale8( index, 256 - dataSmoothing);
-      index = newdata;
-    }
-
-    // if this palette is a 'loop', add a slowly-changing base value
-    if( colorLoop) { 
-      index += ihue;
-    }
-
-    bri = dim8_raw( scale8(bri, briScale) );
-
-    CRGB color = ColorFromPalette( currentPalette, index, bri);
-    leds[i] = color;
-  }
-  
-  z += speed/2;
-  // apply slow drift to X and Y, just for visual variation.
-  x += speed / 8;
-
-  ihue++;
-}
-
-void loop() {
-  handleButton();
-
-  // Periodically choose a new palette, speed, and scale
-  ChangePaletteAndSettingsPeriodically();
-
-  // run the blend function only every Nth frames
-  if (countBlend == 5) {
-    nblendPaletteTowardPalette(currentPalette, targetPalette, maxChanges);
-    countBlend = 0;
-  }
-  countBlend++;
-
-  mapCoordToColor();
-  LEDS.show();
-//   delay(20);
 }
 
 #define HOLD_PALETTES_X_TIMES_AS_LONG 8
