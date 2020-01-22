@@ -49,7 +49,7 @@ uint8_t       colorLoop = 1;
  // for blending in palettes smoothly
 uint8_t maxChanges = 48;
 uint8_t countBlend = 0;
-float lerpAmount = 0.2;
+float lerpAmount = 0.1;
 CRGBPalette16 targetPalette( LavaColors_p );
 CRGBPalette16 currentPalette( LavaColors_p );
 
