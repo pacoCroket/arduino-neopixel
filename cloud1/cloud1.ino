@@ -26,7 +26,7 @@ static double y;
 static double z;
 static uint8_t theta0;
 
-double speedFactor = 0.2;
+double speedFactor = 0.15;
 double speed = 6 * speedFactor; // speed is set dynamically once we've started up
 double scaleFactor = 0.5; 
 double scale = 6 * scaleFactor; // scale is set dynamically once we've started up
@@ -182,14 +182,14 @@ void ChangePaletteAndSettingsPeriodically()
     if( secondHand == 5)  { SetupBlackAndWhiteStripedPalette();       speed = 35 * speedFactor; scale = 5 * scaleFactor; colorLoop = 1; }
     if( secondHand ==  10)  { SetupPurpleAndGreenPalette();             speed = 1 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
 //    if( secondHand == 15)  { currentPalette = ForestColors_p;          speed =  3; scale = 8 * scaleFactor; colorLoop = 0; }
+    if( secondHand == 40)  { SetupRandomPalette();                     speed = 4 * speedFactor; scale = 7 * scaleFactor; colorLoop = 1; }
     if( secondHand == 20)  { currentPalette = CloudColors_p;           speed =  8 * speedFactor; scale = 7 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 25)  { currentPalette = RainbowColors_p;         speed = 15 * speedFactor; scale = 5 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 30)  { currentPalette = OceanColors_p;           speed = 20 * speedFactor; scale = 25 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 35)  { currentPalette = PartyColors_p;           speed = 15 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 40)  { SetupRandomPalette();                     speed = 10 * speedFactor; scale = 7 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 25)  { currentPalette = RainbowColors_p;         speed = 12 * speedFactor; scale = 5 * scaleFactor; colorLoop = 1; }
     if( secondHand == 45)  { SetupRandomPalette();                     speed = 7 * speedFactor; scale = 15 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 50)  { SetupRandomPalette();                     speed = 25 * speedFactor; scale = 6 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 55)  { currentPalette = RainbowStripeColors_p;   speed = 12 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 30)  { currentPalette = OceanColors_p;           speed = 20 * speedFactor; scale = 25 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 35)  { currentPalette = PartyColors_p;           speed = 12 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 50)  { SetupRandomPalette();                     speed = 20 * speedFactor; scale = 6 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 55)  { currentPalette = RainbowStripeColors_p;   speed = 10 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
   }
 }
 

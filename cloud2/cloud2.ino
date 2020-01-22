@@ -6,6 +6,7 @@
 #define LED_TYPE    WS2812B
 #define COLOR_ORDER GRB
 #define NUM_LEDS 61
+#define BUTTON_PIN 2
 
 // the box is 29 x 24 x 38 cm
 // store leds in x, y, z, cordinates
@@ -23,13 +24,27 @@ static double x;
 static double y;
 static double z;
 
-double speedFactor = 0.125;
+double speedFactor = 0.8;
 double speed = 6 * speedFactor; // speed is set dynamically once we've started up
-double scaleFactor = 4; 
+double newspeed = speed;
+double scaleFactor = 0.6; 
 double scale = 6 * scaleFactor; // scale is set dynamically once we've started up
+double newscale = scale;
 uint8_t       colorLoop = 1;
 
-CRGBPalette16 currentPalette( PartyColors_p );
+ // for blending in palettes smoothly
+uint8_t maxChanges = 48;
+uint8_t countBlend = 0;
+float lerpAmount = 0.2;
+CRGBPalette16 targetPalette( LavaColors_p );
+CRGBPalette16 currentPalette( LavaColors_p );
+
+boolean buttonState = HIGH;
+boolean prevButtonState = HIGH;
+uint8_t pressCount = 0;
+unsigned long lastStatusSwitch = 999999;
+uint8_t briScale = 255;
+boolean isSwitchingPalette = true;
 
 void setup() {
 //  Serial.begin(9600);
@@ -51,7 +66,7 @@ void mapCoordToColor() {
   static uint8_t ihue=0;
     
   uint8_t dataSmoothing = 0;
-  if( speed < 4) {
+  if( speed < 10) {
     dataSmoothing = 200 - (speed * 4);
   }
 
@@ -63,41 +78,31 @@ void mapCoordToColor() {
     uint16_t zoffset = pgm_read_byte(&(ledsArray[i][2])) * scale;
     
     uint8_t index = inoise8(x + xoffset, y + yoffset, z + zoffset);
-//
-//    uint8_t index = inoise8(x + height, y + radius, xoffset);
-//    uint8_t bri = 220; // another random point for brightness
-
-//    uint8_t index = inoise8(x + xoffset, y + yoffset z);
-    uint8_t bri = inoise8(x + yoffset, y + xoffset, z + zoffset); // another random point for brightness
+    uint8_t bri = inoise8(x + zoffset, y + xoffset, z + yoffset); // another random point for brightness
 
     if( dataSmoothing ) {
-      uint8_t olddata = inoise8(x + xoffset - speed / 8,y + yoffset + speed / 16,z-speed);
-      uint8_t newdata = scale8( olddata, dataSmoothing) + scale8( index, 256 - dataSmoothing);
-      index = newdata;
+      uint8_t oldindex = inoise8(x + xoffset - speed / 2,y + yoffset + speed / 4,z-speed);
+      index = scale8( oldindex, dataSmoothing) + scale8( index, 256 - dataSmoothing);
+      uint8_t oldbri = inoise8(x + xoffset - speed / 2,y + yoffset + speed / 4,z-speed);
+      bri = scale8( oldbri, dataSmoothing) + scale8( index, 256 - dataSmoothing);
     }
 
     // if this palette is a 'loop', add a slowly-changing base value
-      if( colorLoop) { 
-        index += ihue;
-      }
+    if( colorLoop) { 
+      index += ihue;
+    }
 
-      // brighten up, as the color palette itself often contains the 
-      // light/dark dynamic range desired
-      if( bri > 180 ) {
-        bri = 220;
-      } else {
-        bri = dim8_raw( bri );
-      }
+    bri = dim8_raw( scale8(bri, briScale) );
 
     CRGB color = ColorFromPalette( currentPalette, index, bri);
     leds[i] = color;
   }
   
-  z += speed / 4;
+  z += speed;
   
   // apply slow drift to X and Y, just for visual variation.
-  x += speed / 8;
-  y -= speed / 16;
+  x += speed / 2;
+  y -= speed / 4;
 
   ihue+=1;
   
@@ -107,13 +112,54 @@ void loop() {
   // Periodically choose a new palette, speed, and scale
   ChangePaletteAndSettingsPeriodically();
 
-  // change 1D smooth closing noise array periodically
-  // TODO > incrementally change the center of circle ingenerateNoiseLoop()
+  // run the blend function only every Nth frames
+  if (countBlend == 3) {
+    nblendPaletteTowardPalette(currentPalette, targetPalette, maxChanges);
+    countBlend = 0;
+  } else if (countBlend == 1 && speed != newspeed) {
+    speed = (1-lerpAmount)*speed + newspeed*lerpAmount;
+    scale = (1-lerpAmount)*scale + newscale*lerpAmount;
+  }
 
+  countBlend++;
   mapCoordToColor();
 
   LEDS.show();
 //   delay(20);
+}
+
+
+void handleButton() {
+  buttonState = digitalRead(BUTTON_PIN);
+
+  if (buttonState != prevButtonState) {
+    pressCount++;
+    
+    // button released
+    if (pressCount % 2 == 0) {
+      // change pallete if pressed and released within 1 sec
+      if (millis() - lastStatusSwitch < 1000) {
+        isSwitchingPalette = !isSwitchingPalette;
+      }
+
+    // button pressed
+    } 
+    // else {}
+    // record last state change
+    lastStatusSwitch = millis();
+  } 
+  
+  if (buttonState == LOW && millis()-lastStatusSwitch >= 1000) {
+    // increase or decrease brightness
+    if (pressCount % 4 == 1 && briScale < 255) {
+      briScale++;
+    } else if (pressCount % 4 == 3 && briScale > 0) {  
+      briScale--;
+    }
+
+  }
+
+  prevButtonState = buttonState;
 }
 
 #define HOLD_PALETTES_X_TIMES_AS_LONG 8
@@ -123,49 +169,41 @@ void ChangePaletteAndSettingsPeriodically()
   uint8_t secondHand = ((millis() / 1000) / HOLD_PALETTES_X_TIMES_AS_LONG) % 60;
   static uint8_t lastSecond = 99;
   
-  if( lastSecond != secondHand) {
+  if( lastSecond != secondHand && isSwitchingPalette) {
     lastSecond = secondHand;
-    if( secondHand == 0)  { currentPalette = LavaColors_p;            speed =  8 * speedFactor; scale = 8 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 5)  { SetupBlackAndWhiteStripedPalette();       speed = 40 * speedFactor; scale = 16 * scaleFactor; colorLoop = 1; }
-    if( secondHand ==  10)  { SetupPurpleAndGreenPalette();             speed = 1 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 0)  { targetPalette = LavaColors_p;            newspeed =  7 * speedFactor; newscale = 7 * scaleFactor; colorLoop = 0; }
+    if( secondHand == 5)  { SetupBlackAndWhiteStripedPalette();       newspeed = 35 * speedFactor; newscale = 5 * scaleFactor; colorLoop = 1; }
+    if( secondHand ==  10)  { SetupPurpleAndGreenPalette();             newspeed = 1 * speedFactor; newscale = 4 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 20)  { SetupRandomPalette();                     newspeed = 7 * speedFactor; newscale = 7 * scaleFactor; colorLoop = 1; }
 //    if( secondHand == 15)  { currentPalette = ForestColors_p;          speed =  3; scale = 8 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 20)  { currentPalette = CloudColors_p;           speed =  8 * speedFactor; scale = 8 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 25)  { currentPalette = RainbowColors_p;         speed = 16 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 30)  { currentPalette = OceanColors_p;           speed = 20 * speedFactor; scale = 25 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 35)  { currentPalette = PartyColors_p;           speed = 16 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 40)  { SetupRandomPalette();                     speed = 10 * speedFactor; scale = 8 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 45)  { SetupRandomPalette();                     speed = 8 * speedFactor; scale = 16 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 50)  { SetupRandomPalette();                     speed = 25 * speedFactor; scale = 6 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 55)  { currentPalette = RainbowStripeColors_p;   speed = 12 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 25)  { targetPalette = CloudColors_p;           newspeed =  8 * speedFactor; newscale = 7 * scaleFactor; colorLoop = 0; }
+    if( secondHand == 30)  { targetPalette = RainbowColors_p;         newspeed = 12 * speedFactor; newscale = 5 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 35)  { SetupRandomPalette();                     newspeed = 7 * speedFactor; newscale = 15 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 40)  { targetPalette = OceanColors_p;           newspeed = 20 * speedFactor; newscale = 25 * scaleFactor; colorLoop = 0; }
+    if( secondHand == 45)  { targetPalette = PartyColors_p;           newspeed = 12 * speedFactor; newscale = 4 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 50)  { SetupRandomPalette();                     newspeed = 20 * speedFactor; newscale = 6 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 55)  { targetPalette = RainbowStripeColors_p;   newspeed = 10 * speedFactor; newscale = 4 * scaleFactor; colorLoop = 1; }
   }
 }
 
-// This function generates a random palette that's a gradient
-// between four different colors.  The first is a dim hue, the second is 
-// a bright hue, the third is a bright pastel, and the last is 
-// another bright hue.  This gives some visual bright/dark variation
-// which is more interesting than just a gradient of different hues.
 void SetupRandomPalette()
 {
-  currentPalette = CRGBPalette16( 
+  targetPalette = CRGBPalette16( 
                       CHSV( random8(), 255, 32), 
                       CHSV( random8(), 255, 255), 
                       CHSV( random8(), 128, 255), 
                       CHSV( random8(), 255, 255)); 
 }
 
-// This function sets up a palette of black and white stripes,
-// using code.  Since the palette is effectively an array of
-// sixteen CRGB colors, the various fill_* functions can be used
-// to set them up.
+
 void SetupBlackAndWhiteStripedPalette()
 {
   // 'black out' all 16 palette entries...
-  fill_solid( currentPalette, 16, CRGB::Black);
+  fill_solid( targetPalette, 16, CRGB::Black);
   // and set every fourth one to white.
-//  currentPalette[0] = CRGB::White;
-  currentPalette[9] = CRGB::White;
-//  currentPalette[11] = CRGB::White;
+  targetPalette[0] = CRGB::White;
+//  targetPalette[9] = CRGB::White;
+  targetPalette[11] = CRGB::White;
 }
 
 // This function sets up a palette of purple and green stripes.
@@ -175,7 +213,7 @@ void SetupPurpleAndGreenPalette()
   CRGB green  = CHSV( HUE_GREEN, 255, 255);
   CRGB black  = CRGB::Black;
   
-  currentPalette = CRGBPalette16( 
+  targetPalette = CRGBPalette16( 
     green,  green,  black,  black,
     purple, purple, black,  black,
     green,  green,  black,  black,

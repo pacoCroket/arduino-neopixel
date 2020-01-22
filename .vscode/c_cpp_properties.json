@@ -9,19 +9,22 @@
                 "C:\\Users\\Paco\\AppData\\Local\\Arduino15\\packages\\arduino\\tools\\**",
                 "C:\\Users\\Paco\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.8.1\\**",
                 "${workspaceFolder}/**",
-                "D:/Libraries/Documents/Arduino/**"
+                "D:/Libraries/Documents/Arduino/**",
+                "C:\\Program Files\\arduino-nightly\\hardware\\arduino\\avr\\**",
+                "C:\\Program Files\\arduino-nightly\\tools\\**"
             ],
             "defines": [
                 "_DEBUG",
                 "UNICODE",
                 "_UNICODE"
             ],
-            "compilerPath": "C:\\MinGW\\bin\\gcc.exe",
+            "compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/VC/Tools/MSVC/14.16.27023/bin/Hostx64/x64/cl.exe",
             "cStandard": "c11",
             "cppStandard": "c++17",
-            "intelliSenseMode": "clang-x64",
+            "intelliSenseMode": "${default}",
             "forcedInclude": [
-                "C:\\Users\\Paco\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.8.2\\cores\\arduino\\Arduino.h"
+                "C:\\Users\\Paco\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.8.2\\cores\\arduino\\Arduino.h",
+                "C:\\Program Files\\arduino-nightly\\hardware\\arduino\\avr\\cores\\arduino\\Arduino.h"
             ]
         }
     ],
