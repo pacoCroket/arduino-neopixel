@@ -17,13 +17,16 @@ static double z;
 
 double speedFactor = 0.15;
 double speed = 6 * speedFactor; // speed is set dynamically once we've started up
+double newspeed = speed;
 double scaleFactor = 2; 
 double scale = 6 * scaleFactor; // scale is set dynamically once we've started up
+double newscale = scale;
 uint8_t       colorLoop = 1;
 
  // for blending in palettes smoothly
 uint8_t maxChanges = 48;
 uint8_t countBlend = 0;
+float lerpAmount = 0.2;
 CRGBPalette16 targetPalette( LavaColors_p );
 CRGBPalette16 currentPalette( LavaColors_p );
 
@@ -109,9 +112,10 @@ void mapCoordToColor() {
     uint8_t bri = inoise8(x, z + xoffset); // another random point for brightness
 
     if( dataSmoothing ) {
-      uint8_t olddata = inoise8(x + xoffset - speed / 8,z-speed);
-      uint8_t newdata = scale8( olddata, dataSmoothing) + scale8( index, 256 - dataSmoothing);
-      index = newdata;
+      uint8_t oldindex = inoise8(x + xoffset - speed / 8,z-speed/2);
+      index = scale8( oldindex, dataSmoothing) + scale8( index, 256 - dataSmoothing);
+      uint8_t oldbri = inoise8(x - speed / 8,z-speed/2 + xoffset);
+      bri = scale8( oldbri, dataSmoothing) + scale8( index, 256 - dataSmoothing);
     }
 
     // if this palette is a 'loop', add a slowly-changing base value
@@ -142,6 +146,9 @@ void loop() {
   if (countBlend == 5) {
     nblendPaletteTowardPalette(currentPalette, targetPalette, maxChanges);
     countBlend = 0;
+  } else if (countBlend == 1 && speed != newspeed) {
+    speed = (1-lerpAmount)*speed + newspeed*lerpAmount;
+    scale = (1-lerpAmount)*scale + newscale*lerpAmount;
   }
   countBlend++;
 
@@ -159,18 +166,18 @@ void ChangePaletteAndSettingsPeriodically()
   
   if( lastSecond != secondHand && isSwitchingPalette) {
     lastSecond = secondHand;
-    if( secondHand == 0)  { targetPalette = LavaColors_p;            speed =  7 * speedFactor; scale = 7 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 5)  { SetupBlackAndWhiteStripedPalette();       speed = 35 * speedFactor; scale = 5 * scaleFactor; colorLoop = 1; }
-    if( secondHand ==  10)  { SetupPurpleAndGreenPalette();             speed = 1 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 0)  { targetPalette = LavaColors_p;            newspeed =  7 * speedFactor; newscale = 7 * scaleFactor; colorLoop = 0; }
+    if( secondHand == 5)  { SetupBlackAndWhiteStripedPalette();       newspeed = 35 * speedFactor; newscale = 5 * scaleFactor; colorLoop = 1; }
+    if( secondHand ==  10)  { SetupPurpleAndGreenPalette();             newspeed = 1 * speedFactor; newscale = 4 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 20)  { SetupRandomPalette();                     newspeed = 8 * speedFactor; newscale = 7 * scaleFactor; colorLoop = 1; }
 //    if( secondHand == 15)  { currentPalette = ForestColors_p;          speed =  3; scale = 8 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 15)  { targetPalette = CloudColors_p;           speed =  8 * speedFactor; scale = 7 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 25)  { targetPalette = RainbowColors_p;         speed = 15 * speedFactor; scale = 5 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 30)  { targetPalette = OceanColors_p;           speed = 20 * speedFactor; scale = 25 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 35)  { targetPalette = PartyColors_p;           speed = 15 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 40)  { SetupRandomPalette();                     speed = 10 * speedFactor; scale = 7 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 45)  { SetupRandomPalette();                     speed = 7 * speedFactor; scale = 15 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 50)  { SetupRandomPalette();                     speed = 25 * speedFactor; scale = 6 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 55)  { targetPalette = RainbowStripeColors_p;   speed = 12 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 25)  { targetPalette = CloudColors_p;           newspeed =  8 * speedFactor; newscale = 7 * scaleFactor; colorLoop = 0; }
+    if( secondHand == 30)  { targetPalette = RainbowColors_p;         newspeed = 12 * speedFactor; newscale = 5 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 35)  { SetupRandomPalette();                     newspeed = 7 * speedFactor; newscale = 15 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 40)  { targetPalette = OceanColors_p;           newspeed = 20 * speedFactor; newscale = 25 * scaleFactor; colorLoop = 0; }
+    if( secondHand == 45)  { targetPalette = PartyColors_p;           newspeed = 12 * speedFactor; newscale = 4 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 50)  { SetupRandomPalette();                     newspeed = 22 * speedFactor; newscale = 6 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 55)  { targetPalette = RainbowStripeColors_p;   newspeed = 10 * speedFactor; newscale = 4 * scaleFactor; colorLoop = 1; }
   }
 }
 

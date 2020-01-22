@@ -81,9 +81,9 @@ void mapCoordToColor() {
     uint8_t bri = inoise8(x + zoffset, y + xoffset, z + yoffset); // another random point for brightness
 
     if( dataSmoothing ) {
-      uint8_t oldindex = inoise8(x + xoffset - speed / 2,y + yoffset + speed / 4,z-speed);
+      uint8_t oldindex = inoise8(x + xoffset - speed / 2,y + yoffset + speed / 4,z + zoffset-speed);
       index = scale8( oldindex, dataSmoothing) + scale8( index, 256 - dataSmoothing);
-      uint8_t oldbri = inoise8(x + xoffset - speed / 2,y + yoffset + speed / 4,z-speed);
+      uint8_t oldbri = inoise8(x + zoffset - speed / 2,y + xoffset + speed / 4,z + zoffset-speed);
       bri = scale8( oldbri, dataSmoothing) + scale8( index, 256 - dataSmoothing);
     }
 
@@ -99,8 +99,6 @@ void mapCoordToColor() {
   }
   
   z += speed;
-  
-  // apply slow drift to X and Y, just for visual variation.
   x += speed / 2;
   y -= speed / 4;
 

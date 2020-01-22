@@ -92,8 +92,8 @@ void mapCoordToColor() {
     uint8_t bri = inoise8(x + yoffset, y + xoffset, z + zoffset); // another random point for brightness
 
     if( dataSmoothing ) {
-        uint8_t oldIndex = inoise8(x + xoffset - speed/4, y + yoffset + speed/8, z-speed);
-        uint8_t oldBri = inoise8(x + yoffset - speed/4, y + xoffset + speed/8, z-speed);
+        uint8_t oldIndex = inoise8(x + xoffset - speed/4, y + yoffset + speed/8, z + zoffset - speed);
+        uint8_t oldBri = inoise8(x + yoffset - speed/4, y + xoffset + speed/8, z + zoffset - speed);
         index = scale8( oldIndex, dataSmoothing) + scale8( oldIndex, 256 - dataSmoothing);
         bri = scale8( oldBri, dataSmoothing) + scale8( oldBri, 256 - dataSmoothing);
     }
