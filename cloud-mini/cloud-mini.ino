@@ -29,13 +29,16 @@ static double z;
 
 double speedFactor = 0.08;
 double speed = 6 * speedFactor; // speed is set dynamically once we've started up
+double newspeed = speed;
 double scaleFactor = 0.6; 
 double scale = 6 * scaleFactor; // scale is set dynamically once we've started up
+double newscale = scale;
 uint8_t       colorLoop = 1;
 
  // for blending in palettes smoothly
 uint8_t maxChanges = 48;
 uint8_t countBlend = 0;
+float lerpAmount = 0.1;
 CRGBPalette16 targetPalette( LavaColors_p );
 CRGBPalette16 currentPalette( LavaColors_p );
 
@@ -67,7 +70,7 @@ void mapCoordToColor() {
     
   uint8_t dataSmoothing = 0;
   if( speed < 4) {
-    dataSmoothing = 220 - (speed * 30);
+    dataSmoothing = 220 - (speed * 5);
   }
 
   for (uint8_t i = 0; i < NUM_LEDS; i++) {
@@ -81,9 +84,10 @@ void mapCoordToColor() {
     uint8_t bri = inoise8(x + zoffset, y + xoffset, z + yoffset); // another random point for brightness
 
     if( dataSmoothing ) {
-      uint8_t olddata = inoise8(x + xoffset - speed / 2,y + yoffset + speed / 4,z-speed);
-      uint8_t newdata = scale8( olddata, dataSmoothing) + scale8( index, 256 - dataSmoothing);
-      index = newdata;
+      uint8_t oldindex = inoise8(x + xoffset - speed / 2,y + yoffset + speed / 4,z + zoffset-speed);
+      uint8_t oldbri = inoise8(x + zoffset - speed / 2,y + xoffset + speed / 4,z + yoffset-speed);
+      index = scale8( oldindex, dataSmoothing) + scale8( index, 256 - dataSmoothing);
+      bri = scale8( oldbri, dataSmoothing) + scale8( bri, 256 - dataSmoothing);
     }
 
     // if this palette is a 'loop', add a slowly-changing base value
@@ -98,8 +102,6 @@ void mapCoordToColor() {
   }
   
   z += speed;
-  
-  // apply slow drift to X and Y, just for visual variation.
   x += speed / 2;
   y -= speed / 4;
 
@@ -115,7 +117,11 @@ void loop() {
   if (countBlend == 3) {
     nblendPaletteTowardPalette(currentPalette, targetPalette, maxChanges);
     countBlend = 0;
+  } else if (countBlend == 1 && speed != newspeed) {
+    speed = (1-lerpAmount)*speed + newspeed*lerpAmount;
+    scale = (1-lerpAmount)*scale + newscale*lerpAmount;
   }
+
   countBlend++;
   mapCoordToColor();
 
@@ -169,15 +175,15 @@ void ChangePaletteAndSettingsPeriodically()
     if( secondHand == 0)  { targetPalette = LavaColors_p;            speed =  7 * speedFactor; scale = 7 * scaleFactor; colorLoop = 0; }
     if( secondHand == 5)  { SetupBlackAndWhiteStripedPalette();       speed = 50 * speedFactor; scale = 5 * scaleFactor; colorLoop = 1; }
     if( secondHand ==  10)  { SetupPurpleAndGreenPalette();             speed = 1 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 40)  { SetupRandomPalette();                     speed = 10 * speedFactor; scale = 7 * scaleFactor; colorLoop = 1; }
 //    if( secondHand == 15)  { currentPalette = ForestColors_p;          speed =  3; scale = 8 * scaleFactor; colorLoop = 0; }
     if( secondHand == 15)  { targetPalette = CloudColors_p;           speed =  8 * speedFactor; scale = 7 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 25)  { targetPalette = RainbowColors_p;         speed = 15 * speedFactor; scale = 5 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 30)  { targetPalette = OceanColors_p;           speed = 20 * speedFactor; scale = 25 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 35)  { targetPalette = PartyColors_p;           speed = 15 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 40)  { SetupRandomPalette();                     speed = 10 * speedFactor; scale = 7 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 25)  { targetPalette = RainbowColors_p;         speed = 12 * speedFactor; scale = 5 * scaleFactor; colorLoop = 1; }
     if( secondHand == 45)  { SetupRandomPalette();                     speed = 7 * speedFactor; scale = 15 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 30)  { targetPalette = OceanColors_p;           speed = 18 * speedFactor; scale = 25 * scaleFactor; colorLoop = 0; }
+    if( secondHand == 35)  { targetPalette = PartyColors_p;           speed = 12 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
     if( secondHand == 50)  { SetupRandomPalette();                     speed = 25 * speedFactor; scale = 6 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 55)  { targetPalette = RainbowStripeColors_p;   speed = 12 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 55)  { targetPalette = RainbowStripeColors_p;   speed = 10 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
   }
 }
 

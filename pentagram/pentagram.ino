@@ -1,47 +1,31 @@
 #include <FastLED.h>
 
 // LED
-#define LED_PIN     3
+#define LED_PIN1     3
+#define LED_PIN2     5
 #define BRIGHTNESS  255
 #define LED_TYPE    WS2812B
 #define COLOR_ORDER GRB
-#define NUM_LEDS 63
+#define NUM_LEDS1 75
+#define NUM_LEDS2 5
 #define BUTTON_PIN 2
 
 // the box is 29 x 24 x 38 cm
-// store leds in x, y, z, cordinates
-const PROGMEM uint8_t ledsArray[NUM_LEDS][3] = {{30, 80, 10}, {30, 80, 13}, {30, 80, 16}, // 0, 1, 2
-{9, 80, 16}, {7, 80, 14}, {5, 80, 12},
-{4, 60, 20}, {6, 60, 22}, {9, 60, 24},
-{10, 37, 24}, {8, 36, 22}, {6, 32, 20},
-{4, 22, 16}, {5, 22, 20}, {9, 22, 20}, 
-{28, 10, 20}, {29, 8, 17}, {30, 6, 14},
-{50, 9, 19}, {52, 9, 17}, {54, 9, 15}, 
-{55, 30, 15}, {53, 30, 13}, {51, 30, 14},
-{51, 55, 14}, {53, 55, 12}, {55, 55, 10},
-{52, 70, 10}, {54, 73, 8}, {52, 70, 6},
-{28, 70, 2}, {25, 70, 2}, {22, 70, 2},
-{10, 60, 3}, {8, 58, 2}, {10, 56, 1},
-{11, 40, 0}, {14, 40, 1}, {17, 40, 2},
-{40, 49, 8}, {40, 46, 8}, {40, 43, 8},
-{53, 26, 8}, {53, 23, 8}, {53, 20, 8},
-{40, 10, 8}, {43, 10, 7}, {46, 10, 8},
-{25, 23, 10}, {25, 26, 10}, {25, 29, 10},
-{10, 18, 2}, {10, 15, 2}, {10, 12, 2},
-{10, 1, 13}, {10, 3, 16}, {10, 5, 19},
-{32, 30, 22}, {31, 33, 21}, {30, 36, 20},
-{40, 60, 18}, {40, 63, 19}, {40, 66, 20}}; // 60, 61, 62
-// The leds
-CRGB leds[NUM_LEDS];
+// store leds1 in x, y, z, cordinates
+const PROGMEM uint8_t ledsArray[NUM_LEDS1][2] = 
+{{59, 26}, {72, 37}, {87, 50}, {100, 61}, {115, 72}, {142, 95}, {157, 106}, {173, 118}, {187, 128}, {202, 140}, {217, 150}, {244, 171}, {226, 171}, {208, 171}, {189, 170}, {171, 170}, {134, 169}, {114, 169}, {95, 168}, {78, 168}, {59, 167}, {41, 167}, {5, 166}, {20, 155}, {36, 145}, {50, 135}, {66, 125}, {96, 103}, {112, 93}, {127, 82}, {143, 72}, {156, 62}, {172, 50}, {202, 30}, {196, 48}, {189, 66}, {183, 86}, {177, 102}, {166, 137}, {160, 154}, {152, 171}, {147, 188}, {140, 205}, {134, 222}, {121, 255}, {116, 237}, {110, 220}, {106, 203}, {101, 186}, {90, 150}, {85, 133}, {81, 115}, {76, 97}, {71, 80}, {66, 61}, {78, 13}, {113, 0}, {148, 0}, {181, 17}, {219, 44}, {239, 75}, {247, 105}, {250, 143}, {240, 193}, {216, 221}, {184, 239}, {149, 251}, {94, 251}, {62, 236}, {37, 216}, {13, 187}, {0, 138}, {5, 101}, {16, 73}, {36, 42}};
+// The leds1
+CRGB leds1[NUM_LEDS1];
+CRGB leds2[NUM_LEDS2];
 
 static double x;
 static double y;
 static double z;
 
-double speedFactor = 0.1;
+double speedFactor = 0.4;
 double speed = 6 * speedFactor; // speed is set dynamically once we've started up
 double newspeed = speed;
-double scaleFactor = 0.4; 
+double scaleFactor = 0.3; 
 double scale = 6 * scaleFactor; // scale is set dynamically once we've started up
 double newscale = scale;
 uint8_t       colorLoop = 1;
@@ -63,7 +47,8 @@ boolean isSwitchingPalette = true;
 void setup() {
 //  Serial.begin(9600);
   
-  LEDS.addLeds<LED_TYPE,LED_PIN,COLOR_ORDER>(leds,NUM_LEDS);
+  LEDS.addLeds<LED_TYPE,LED_PIN1,COLOR_ORDER>(leds1,NUM_LEDS1);
+  LEDS.addLeds<LED_TYPE,LED_PIN2,COLOR_ORDER>(leds2,NUM_LEDS2);
   LEDS.setBrightness(BRIGHTNESS);
 
   // Initialize our coordinates to some random values
@@ -73,27 +58,26 @@ void setup() {
 }
 
 void mapCoordToColor() {
-  static uint8_t ihue=0;
+  static uint8_t ihue=random8()/4;
     
   uint8_t dataSmoothing = 0;
   // TODO what speed?
-  if( speed < 2) {
-    dataSmoothing = 200 - (speed * 4);
+  if( speed < 3) {
+    dataSmoothing = 200 - (speed * 5);
   }
 
-  for (uint8_t i = 0; i < NUM_LEDS; i++) {
+  for (uint8_t i = 0; i < NUM_LEDS1; i++) {
     // first value is the radius
     
     uint16_t xoffset = pgm_read_byte(&(ledsArray[i][0])) * scale;
     uint16_t yoffset = pgm_read_byte(&(ledsArray[i][1])) * scale;
-    uint16_t zoffset = pgm_read_byte(&(ledsArray[i][2])) * scale;
     
-    uint8_t index = inoise8(x + xoffset, y + yoffset, z + zoffset);
-    uint8_t bri = inoise8(x + yoffset, y + xoffset, z + zoffset); // another random point for brightness
+    uint8_t index = inoise8(x + xoffset, y + yoffset, z);
+    uint8_t bri = inoise8(x + yoffset, y + xoffset, z); // another random point for brightness
 
-    if( dataSmoothing ) {
-        uint8_t oldIndex = inoise8(x + xoffset - speed/2, y + yoffset + speed/4, z + zoffset - speed);
-        uint8_t oldBri = inoise8(x + yoffset - speed/2, y + xoffset + speed/4, z + zoffset - speed);
+    if ( dataSmoothing ) {
+        uint8_t oldIndex = inoise8(x + xoffset, y + yoffset - speed, z - speed);
+        uint8_t oldBri = inoise8(x + yoffset, y + xoffset - speed, z - speed);
         index = scale8( oldIndex, dataSmoothing) + scale8( index, 256 - dataSmoothing);
         bri = scale8( oldBri, dataSmoothing) + scale8( bri, 256 - dataSmoothing);
     }
@@ -106,14 +90,12 @@ void mapCoordToColor() {
     bri = dim8_raw( scale8(bri, briScale) );
 
     CRGB color = ColorFromPalette( currentPalette, index, bri);
-    leds[i] = color;
+    leds1[i] = color;
+    if (i < NUM_LEDS2) leds2[i] = color;
   }
   
   z += speed;
-  
-  // apply slow drift to X and Y, just for visual variation.
-  x += speed / 2;
-  y -= speed / 4;
+  y += speed;
 
   ihue+=1;
   
@@ -185,17 +167,17 @@ void ChangePaletteAndSettingsPeriodically()
   if( lastSecond != secondHand && isSwitchingPalette) {
     lastSecond = secondHand;
     if( secondHand == 0)  { targetPalette = LavaColors_p;            newspeed =  7 * speedFactor; newscale = 7 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 5)  { SetupBlackAndWhiteStripedPalette();       newspeed = 35 * speedFactor; newscale = 5 * scaleFactor; colorLoop = 1; }
-    if( secondHand ==  10)  { SetupPurpleAndGreenPalette();             newspeed = 1 * speedFactor; newscale = 4 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 20)  { SetupRandomPalette();                     newspeed = 7 * speedFactor; newscale = 7 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 10)  { SetupBlackAndWhiteStripedPalette();       newspeed = 35 * speedFactor; newscale = 5 * scaleFactor; colorLoop = 1; }
+    if( secondHand ==  20)  { SetupPurpleAndGreenPalette();             newspeed = 1 * speedFactor; newscale = 4 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 30)  { SetupRandomPalette();                     newspeed = 7 * speedFactor; newscale = 7 * scaleFactor; colorLoop = 1; }
 //    if( secondHand == 15)  { currentPalette = ForestColors_p;          speed =  3; scale = 8 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 25)  { targetPalette = CloudColors_p;           newspeed =  8 * speedFactor; newscale = 7 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 30)  { targetPalette = RainbowColors_p;         newspeed = 12 * speedFactor; newscale = 5 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 35)  { SetupRandomPalette();                     newspeed = 5 * speedFactor; newscale = 15 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 40)  { targetPalette = OceanColors_p;           newspeed = 15 * speedFactor; newscale = 25 * scaleFactor; colorLoop = 0; }
+    // if( secondHand == 25)  { targetPalette = CloudColors_p;           newspeed =  8 * speedFactor; newscale = 7 * scaleFactor; colorLoop = 0; }
+    if( secondHand == 35)  { targetPalette = RainbowColors_p;         newspeed = 12 * speedFactor; newscale = 5 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 40)  { SetupRandomPalette();                     newspeed = 5 * speedFactor; newscale = 12 * scaleFactor; colorLoop = 1; }
+    // if( secondHand == 40)  { targetPalette = OceanColors_p;           newspeed = 15 * speedFactor; newscale = 25 * scaleFactor; colorLoop = 0; }
     if( secondHand == 45)  { targetPalette = PartyColors_p;           newspeed = 11 * speedFactor; newscale = 4 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 50)  { SetupRandomPalette();                     newspeed = 20 * speedFactor; newscale = 6 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 55)  { targetPalette = RainbowStripeColors_p;   newspeed = 9 * speedFactor; newscale = 4 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 53)  { SetupRandomPalette();                     newspeed = 16 * speedFactor; newscale = 6 * scaleFactor; colorLoop = 1; }
+    // if( secondHand == 55)  { targetPalette = RainbowStripeColors_p;   newspeed = 9 * speedFactor; newscale = 4 * scaleFactor; colorLoop = 1; }
   }
 }
 

@@ -4,9 +4,9 @@
 // LED
 #define LED_PIN     3
 #define BRIGHTNESS  255
-#define LED_TYPE    WS2811
-#define COLOR_ORDER BRG // GRB for WS2812, BRG for WS2811
-#define NUM_LEDS 100
+#define LED_TYPE    WS2812B
+#define COLOR_ORDER GRB // GRB for WS2812, BRG for WS2811
+#define NUM_LEDS 40
 #define BUTTON_PIN 2
 
 // The leds
@@ -18,7 +18,7 @@ static double z;
 double speedFactor = 0.15;
 double speed = 6 * speedFactor; // speed is set dynamically once we've started up
 double newspeed = speed;
-double scaleFactor = 2; 
+double scaleFactor = 3; 
 double scale = 6 * scaleFactor; // scale is set dynamically once we've started up
 double newscale = scale;
 uint8_t       colorLoop = 1;
@@ -100,7 +100,7 @@ void mapCoordToColor() {
     
   uint8_t dataSmoothing = 0;
   if( speed < 4) {
-    dataSmoothing = 220 - (speed * 4);
+    dataSmoothing = 200 - (speed * 4);
   }
 
   for (int i = 0; i < NUM_LEDS; i++) {
@@ -112,10 +112,10 @@ void mapCoordToColor() {
     uint8_t bri = inoise8(x, z + xoffset); // another random point for brightness
 
     if( dataSmoothing ) {
-      uint8_t oldindex = inoise8(x + xoffset - speed / 8,z-speed/2);
+      uint8_t oldindex = inoise8(x + xoffset - speed / 2,z-speed/2);
+      uint8_t oldbri = inoise8(x - speed / 2,z-speed/2 + xoffset);
       index = scale8( oldindex, dataSmoothing) + scale8( index, 256 - dataSmoothing);
-      uint8_t oldbri = inoise8(x - speed / 8,z-speed/2 + xoffset);
-      bri = scale8( oldbri, dataSmoothing) + scale8( index, 256 - dataSmoothing);
+      bri = scale8( oldbri, dataSmoothing) + scale8( bri, 256 - dataSmoothing);
     }
 
     // if this palette is a 'loop', add a slowly-changing base value
@@ -131,7 +131,7 @@ void mapCoordToColor() {
   
   z += speed/2;
   // apply slow drift to X and Y, just for visual variation.
-  x += speed / 8;
+  x -= speed / 2;
 
   ihue++;
 }

@@ -66,7 +66,7 @@ void mapCoordToColor() {
   static uint8_t ihue=0;
     
   uint8_t dataSmoothing = 0;
-  if( speed < 10) {
+  if( speed < 5) {
     dataSmoothing = 200 - (speed * 4);
   }
 
@@ -82,9 +82,9 @@ void mapCoordToColor() {
 
     if( dataSmoothing ) {
       uint8_t oldindex = inoise8(x + xoffset - speed / 2,y + yoffset + speed / 4,z + zoffset-speed);
+      uint8_t oldbri = inoise8(x + zoffset - speed / 2,y + xoffset + speed / 4,z + yoffset-speed);
       index = scale8( oldindex, dataSmoothing) + scale8( index, 256 - dataSmoothing);
-      uint8_t oldbri = inoise8(x + zoffset - speed / 2,y + xoffset + speed / 4,z + zoffset-speed);
-      bri = scale8( oldbri, dataSmoothing) + scale8( index, 256 - dataSmoothing);
+      bri = scale8( oldbri, dataSmoothing) + scale8( bri, 256 - dataSmoothing);
     }
 
     // if this palette is a 'loop', add a slowly-changing base value

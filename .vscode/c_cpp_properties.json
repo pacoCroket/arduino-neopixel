@@ -11,7 +11,9 @@
                 "${workspaceFolder}/**",
                 "D:/Libraries/Documents/Arduino/**",
                 "C:\\Program Files\\arduino-nightly\\hardware\\arduino\\avr\\**",
-                "C:\\Program Files\\arduino-nightly\\tools\\**"
+                "C:\\Program Files\\arduino-nightly\\tools\\**",
+                "C:\\Users\\Paco Croket\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.8.2\\**",
+                "C:\\Users\\Paco Croket\\AppData\\Local\\Arduino15\\packages\\arduino\\tools\\**"
             ],
             "defines": [
                 "_DEBUG",
@@ -23,8 +25,7 @@
             "cppStandard": "c++17",
             "intelliSenseMode": "${default}",
             "forcedInclude": [
-                "C:\\Users\\Paco\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.8.2\\cores\\arduino\\Arduino.h",
-                "C:\\Program Files\\arduino-nightly\\hardware\\arduino\\avr\\cores\\arduino\\Arduino.h"
+                "C:\\Users\\Paco Croket\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.8.2\\cores\\arduino\\Arduino.h"
             ]
         }
     ],

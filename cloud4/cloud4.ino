@@ -37,9 +37,9 @@ const PROGMEM uint8_t cloudLedsArray[NUM_LEDS2][3] = {
 // static double x1;
 // static double y1;
 // static double z1;
-static double x2;
-static double y2;
-static double z2;
+static double x;
+static double y;
+static double z;
 
 double speedFactor = 0.08;
 double speed = 6 * speedFactor; // speed is set dynamically once we've started up
@@ -74,9 +74,9 @@ void setup() {
   LEDS.setBrightness(BRIGHTNESS);
 
   // Initialize our coordinates to some random values
-  x2 = random8();
-  y2 = random8();
-  z2 = random8();
+  x = random8();
+  y = random8();
+  z = random8();
 
   // initialize the pushbutton pin as an input:
   pinMode(BUTTON_PIN, INPUT_PULLUP);
@@ -92,8 +92,8 @@ void cloudMapping() {
     uint16_t yoffset = pgm_read_byte(&(cloudLedsArray[i][1])) * scale;
     uint16_t zoffset = pgm_read_byte(&(cloudLedsArray[i][2])) * scale;
     
-    uint8_t index = inoise8(x2 + xoffset, y2 + yoffset, z2 + zoffset);
-    uint8_t bri = inoise8(x2 + zoffset, y2 + xoffset, z2 + yoffset); // another random point for brightness
+    uint8_t index = inoise8(x + xoffset, y + yoffset, z + zoffset);
+    uint8_t bri = inoise8(x + zoffset, y + xoffset, z + yoffset); // another random point for brightness
 
     // if this palette is a 'loop', add a slowly-changing base value
     if( colorLoop) { 
@@ -106,11 +106,11 @@ void cloudMapping() {
     cloudLeds[i] = color;
   }
   
-  z2 += speed;
+  z += speed;
   
   // apply slow drift to X and Y, just for visual variation.
-  x2 += speed / 4;
-  y2 -= speed / 8;
+  x += speed / 4;
+  y -= speed / 8;
 
   ihue++;
 }
