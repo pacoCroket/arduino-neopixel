@@ -45,7 +45,7 @@ uint8_t briScale = 255;
 boolean isSwitchingPalette = true;
 
 double pulseRadius = 0;
-double pulseRate = 1.5;
+double pulseRate = 1.7;
 
 
 void setup()
@@ -166,17 +166,17 @@ void pulse()
         }
         else
         {
-            leds1[i].nscale8(238);
+            leds1[i].nscale8(243);
         }
 
         if (i < NUM_LEDS2)
             leds2[i] = leds1[i];
     }
 
-    z += speed;
-    y += speed;
+    z += speed/2;
+    y += speed/2;
 
-    if (pulseRadius >= 146 - pulseRate) pulseRate = -1*pulseRate;
+    if (pulseRadius >= 165 - pulseRate) pulseRate = -1*pulseRate;
     else if (pulseRadius <= -pulseRate) pulseRate = -1*pulseRate;
 
     pulseRadius += pulseRate;
