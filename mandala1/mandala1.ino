@@ -25,16 +25,18 @@ static double z;
 
 double speedFactor = 0.25;
 double speed = 6 * speedFactor; // speed is set dynamically once we've started up
-double newspeed = speed;
+double newSpeed = speed;
+double oldSpeed = speed;
 double scaleFactor = 0.5;
 double scale = 6 * scaleFactor; // scale is set dynamically once we've started up
-double newscale = scale;
+double newScale = scale;
+double oldScale = scale;
 uint8_t colorLoop = 1;
 
 // for blending in palettes smoothly
-uint8_t maxChanges = 4;
-double lerpAmount = 1;
-uint8_t easeInVal = 0;
+uint8_t maxChanges = 5;
+double lerpAmount = 2;
+uint8_t easeInVal = 255;
 CRGBPalette16 targetPalette(LavaColors_p);
 CRGBPalette16 currentPalette(LavaColors_p);
 
@@ -133,7 +135,7 @@ void loop()
     blend();
 
     // switch between perlin noise patterns and pulse patterns every few mins
-    if (minutes16() % 5 <= 3)
+    if (minutes16() % 7 < 6)
     {
         ChangePaletteAndSettingsPeriodically();
         mapCoordToColor();
@@ -158,11 +160,25 @@ void blend()
 {
     nblendPaletteTowardPalette(currentPalette, targetPalette, maxChanges);
 
-    if (easeInVal <= 255 && (speed != newspeed || scale != newscale))
+    if (easeInVal < 255)
     {
-        speed = lerp8by8(speed, newspeed, ease8InOutQuad(easeInVal));
-        scale = lerp8by8(scale, newscale, ease8InOutQuad(easeInVal));
-        easeInVal += lerpAmount;
+        uint8_t easeOutVal = ease8InOutQuad(easeInVal);
+        if (easeOutVal == 0)
+        {
+            scale = oldScale;
+            speed = oldSpeed;
+        }
+        else
+        {
+            speed = lerp8toDouble(easeOutVal, 0, oldSpeed, 255, newSpeed);
+            scale = lerp8toDouble(easeOutVal, 0, oldScale, 255, newScale);
+            // scale = oldScale * (1 - 255.0 / easeOutVal) + newScale * (255.0 / easeOutVal);
+            // speed = oldSpeed * (1 - 255.0 / easeOutVal) + newSpeed * (255.0 / easeOutVal);
+        }
+
+        // speed = lerp8by8(oldSpeed, newSpeed, ease8InOutQuad(easeInVal));
+        // scale = lerp8by8(oldScale, newScale, ease8InOutQuad(easeInVal));
+        easeInVal++;
     }
 }
 
@@ -277,73 +293,68 @@ void ChangePaletteAndSettingsPeriodically()
         if (secondHand == 0)
         {
             SetupLavaPattern();
-            easeInVal = 0;
         }
-        if (secondHand == 10)
+        if (secondHand == 9)
         {
             SetupBlackAndWhiteStripedPalette();
-            newspeed = 35 * speedFactor;
-            newscale = 4 * scaleFactor;
+            newSpeed = 35 * speedFactor;
+            newScale = 4 * scaleFactor;
             colorLoop = 1;
-            easeInVal = 0;
         }
         if (secondHand == 15)
         {
             SetupPurpleAndGreenPalette();
-            newspeed = 1 * speedFactor;
-            newscale = 7 * scaleFactor;
+            newSpeed = 1 * speedFactor;
+            newScale = 7 * scaleFactor;
             colorLoop = 1;
-            easeInVal = 0;
         }
         if (secondHand == 25)
         {
             SetupRandomPalette();
-            newspeed = 7 * speedFactor;
-            newscale = 7 * scaleFactor;
+            newSpeed = 7 * speedFactor;
+            newScale = 7 * scaleFactor;
             colorLoop = 1;
-            easeInVal = 0;
         }
         //    if( secondHand == 15)  { currentPalette = ForestColors_p;          speed =  3; scale = 8 * scaleFactor; colorLoop = 0; }
-        // if( secondHand == 25)  { targetPalette = CloudColors_p;           newspeed =  8 * speedFactor; newscale = 7 * scaleFactor; colorLoop = 0; }
+        // if( secondHand == 25)  { targetPalette = CloudColors_p;           newSpeed =  8 * speedFactor; newScale = 7 * scaleFactor; colorLoop = 0; }
         if (secondHand == 35)
         {
             targetPalette = RainbowColors_p;
-            newspeed = 12 * speedFactor;
-            newscale = 5 * scaleFactor;
+            newSpeed = 12 * speedFactor;
+            newScale = 5 * scaleFactor;
             colorLoop = 1;
-            easeInVal = 0;
+            startBlend();
         }
         if (secondHand == 40)
         {
             SetupRandomPalette();
-            newspeed = 5 * speedFactor;
-            newscale = 12 * scaleFactor;
+            newSpeed = 5 * speedFactor;
+            newScale = 12 * scaleFactor;
             colorLoop = 1;
-            easeInVal = 0;
         }
-        // if( secondHand == 40)  { targetPalette = OceanColors_p;           newspeed = 15 * speedFactor; newscale = 25 * scaleFactor; colorLoop = 0; }
+        // if( secondHand == 40)  { targetPalette = OceanColors_p;           newSpeed = 15 * speedFactor; newScale = 25 * scaleFactor; colorLoop = 0; }
         if (secondHand == 45)
         {
             targetPalette = PartyColors_p;
-            newspeed = 11 * speedFactor;
-            newscale = 4 * scaleFactor;
+            newSpeed = 11 * speedFactor;
+            newScale = 4 * scaleFactor;
             colorLoop = 1;
-            easeInVal = 0;
+            startBlend();
         }
         if (secondHand == 53)
         {
             SetupRandomPalette();
-            newspeed = 15 * speedFactor;
-            newscale = 6 * scaleFactor;
+            newSpeed = 15 * speedFactor;
+            newScale = 6 * scaleFactor;
             colorLoop = 1;
-            easeInVal = 0;
         }
-        // if( secondHand == 55)  { targetPalette = RainbowStripeColors_p;   newspeed = 9 * speedFactor; newscale = 4 * scaleFactor; colorLoop = 1; }
+        // if( secondHand == 55)  { targetPalette = RainbowStripeColors_p;   newSpeed = 9 * speedFactor; newScale = 4 * scaleFactor; colorLoop = 1; }
     }
 }
 
 void SetupRandomPalette()
 {
+    startBlend();
     targetPalette = CRGBPalette16(
         CHSV(random8(), 255, 32),
         CHSV(random8(), 255, 255),
@@ -353,6 +364,7 @@ void SetupRandomPalette()
 
 void SetupBlackAndWhiteStripedPalette()
 {
+    startBlend();
     // 'black out' all 16 palette entries...
     fill_solid(targetPalette, 16, CRGB::Black);
     // and set every fourth one to white.
@@ -364,6 +376,7 @@ void SetupBlackAndWhiteStripedPalette()
 // This function sets up a palette of purple and green stripes.
 void SetupPurpleAndGreenPalette()
 {
+    startBlend();
     CRGB purple = CHSV(HUE_PURPLE, 255, 255);
     CRGB green = CHSV(HUE_GREEN, 255, 255);
     CRGB black = CRGB::Black;
@@ -377,8 +390,9 @@ void SetupPurpleAndGreenPalette()
 
 void SetupFutureBluePalette()
 {
-    newspeed = 7 * speedFactor;
-    newscale = 8 * scaleFactor;
+    startBlend();
+    newSpeed = 7 * speedFactor;
+    newScale = 8 * scaleFactor;
     colorLoop = 0;
 
     CRGB blue0 = CRGB::DarkBlue;
@@ -389,7 +403,7 @@ void SetupFutureBluePalette()
     CRGB black = CRGB::Black;
 
     targetPalette = CRGBPalette16(
-        blue1, black, blue0, blue0,
+        blue0, black, blue0, blue0,
         blue1, blue1, blue2, blue2,
         blue3, blue3, blue4, blue4,
         blue2, blue0, blue3, blue1);
@@ -408,7 +422,20 @@ boolean isNumberInArray(uint8_t number, uint8_t array[])
 void SetupLavaPattern()
 {
     targetPalette = LavaColors_p;
-    newspeed = 7 * speedFactor;
-    newscale = 8 * scaleFactor;
+    newSpeed = 7 * speedFactor;
+    newScale = 8 * scaleFactor;
     colorLoop = 0;
+    startBlend();
+}
+
+void startBlend()
+{
+    easeInVal = 0;
+    oldSpeed = speed;
+    oldScale = scale;
+}
+
+double lerp8toDouble(uint8_t x, double x0, double y0, double x1, double y1)
+{
+    return y0 + (x - x0) * (y1 - y0) / (x1 - x0);
 }
