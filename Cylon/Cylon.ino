@@ -42,7 +42,8 @@ void setup() {
 }
 
 void fadeall() {  
-  for(int i = 0; i < NUM_LEDS; i++) { leds[i].nscale8(252); }
+  uint8_t fadeAmt = map(briScale, 0, 255, 254, 250);
+  for(int i = 0; i < NUM_LEDS; i++) { leds[i].nscale8(fadeAmt); }
 }
 
 
