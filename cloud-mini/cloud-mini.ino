@@ -173,17 +173,17 @@ void ChangePaletteAndSettingsPeriodically()
   if( lastSecond != secondHand && isSwitchingPalette) {
     lastSecond = secondHand;
     if( secondHand == 0)  { targetPalette = LavaColors_p;            speed =  7 * speedFactor; scale = 7 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 5)  { SetupBlackAndWhiteStripedPalette();       speed = 50 * speedFactor; scale = 5 * scaleFactor; colorLoop = 1; }
-    if( secondHand ==  10)  { SetupPurpleAndGreenPalette();             speed = 1 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 40)  { SetupRandomPalette();                     speed = 10 * speedFactor; scale = 7 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 6)  { SetupBlackAndWhiteStripedPalette();       speed = 50 * speedFactor; scale = 5 * scaleFactor; colorLoop = 1; }
+    if( secondHand ==  15)  { SetupPurpleAndGreenPalette();             speed = 1 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 25)  { SetupRandomPalette();                     speed = 10 * speedFactor; scale = 7 * scaleFactor; colorLoop = 1; }
 //    if( secondHand == 15)  { currentPalette = ForestColors_p;          speed =  3; scale = 8 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 15)  { targetPalette = CloudColors_p;           speed =  8 * speedFactor; scale = 7 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 25)  { targetPalette = RainbowColors_p;         speed = 12 * speedFactor; scale = 5 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 45)  { SetupRandomPalette();                     speed = 7 * speedFactor; scale = 15 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 30)  { targetPalette = OceanColors_p;           speed = 18 * speedFactor; scale = 25 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 35)  { targetPalette = PartyColors_p;           speed = 12 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 50)  { SetupRandomPalette();                     speed = 25 * speedFactor; scale = 6 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 55)  { targetPalette = RainbowStripeColors_p;   speed = 10 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
+    // if( secondHand == 15)  { targetPalette = CloudColors_p;           speed =  8 * speedFactor; scale = 7 * scaleFactor; colorLoop = 0; }
+    if( secondHand == 35)  { targetPalette = RainbowColors_p;         speed = 12 * speedFactor; scale = 5 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 40)  { SetupRandomPalette();                     speed = 7 * speedFactor; scale = 15 * scaleFactor; colorLoop = 1; }
+    // if( secondHand == 30)  { targetPalette = OceanColors_p;           speed = 18 * speedFactor; scale = 25 * scaleFactor; colorLoop = 0; }
+    if( secondHand == 45)  { targetPalette = PartyColors_p;           speed = 12 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 53)  { SetupRandomPalette();                     speed = 25 * speedFactor; scale = 6 * scaleFactor; colorLoop = 1; }
+    // if( secondHand == 55)  { targetPalette = RainbowStripeColors_p;   speed = 10 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
   }
 }
 

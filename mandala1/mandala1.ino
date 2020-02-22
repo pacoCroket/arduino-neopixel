@@ -4,7 +4,7 @@
 // LED
 #define LED_PIN1 3
 // #define LED_PIN2 5
-#define BRIGHTNESS 150
+#define BRIGHTNESS 180
 #define LED_TYPE WS2812B
 #define COLOR_ORDER GRB
 #define NUM_LEDS1 135
@@ -280,7 +280,7 @@ void handleButton()
     prevButtonState = buttonState;
 }
 
-#define HOLD_PALETTES_X_TIMES_AS_LONG 6
+#define HOLD_PALETTES_X_TIMES_AS_LONG 8
 
 void ChangePaletteAndSettingsPeriodically()
 {
@@ -294,7 +294,7 @@ void ChangePaletteAndSettingsPeriodically()
         {
             SetupLavaPattern();
         }
-        if (secondHand == 9)
+        if (secondHand == 6)
         {
             SetupBlackAndWhiteStripedPalette();
             newSpeed = 35 * speedFactor;

@@ -31,7 +31,7 @@ double newscale = scale;
 uint8_t colorLoop = 1;
 
 // for blending in palettes smoothly
-uint8_t maxChanges = 48;
+uint8_t maxChanges = 8;
 uint8_t countBlend = 0;
 double lerpAmount = 0.1;
 CRGBPalette16 targetPalette(LavaColors_p);
@@ -119,8 +119,8 @@ void loop()
     blend();
 
     // ChangePaletteAndSettingsPeriodically();
-    // mapCoordToColor();
-    pulse();
+    mapCoordToColor();
+    // pulse();
 
     LEDS.show();
     //   delay(20);

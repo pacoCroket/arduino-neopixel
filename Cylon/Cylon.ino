@@ -1,8 +1,8 @@
 #include <FastLED.h>
 
 // How many leds in your strip?
-#define NUM_LEDS 200 
-#define BRIGHTNESS 130
+#define NUM_LEDS 188
+#define BRIGHTNESS 90
 
 // For led chips like Neopixels, which have a data line, ground, and power, you just
 // need to define DATA_PIN1.  For led chipsets that are SPI based (four wires - data, clock,
@@ -20,7 +20,7 @@ boolean forward = true;
 boolean isAutoBrightness = true;
 
 int i = 0;
-int skipAtEnds = 18;
+int skipAtEnds = 24;
 static uint8_t hue = 0;
 
 boolean buttonState = HIGH;
@@ -30,88 +30,109 @@ uint8_t briScale = 128;
 uint8_t briStep = 24;
 unsigned long lastStatusSwitch = 999999;
 
-void setup() { 
-	// Serial.begin(9600);
-	// Serial.println("beggining!");
+void setup()
+{
+  // Serial.begin(9600);
+  // Serial.println("beggining!");
 
-	// initialize the pushbutton pin as an input:
-	pinMode(BUTTON_PIN, INPUT_PULLUP);
+  // initialize the pushbutton pin as an input:
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
 
-	LEDS.addLeds<WS2812B,DATA_PIN1,RGB>(leds,NUM_LEDS);
-	LEDS.addLeds<WS2812B,DATA_PIN2,RGB>(leds,NUM_LEDS);
-	LEDS.setBrightness(BRIGHTNESS);
+  LEDS.addLeds<WS2812B, DATA_PIN1, RGB>(leds, NUM_LEDS);
+  LEDS.addLeds<WS2812B, DATA_PIN2, RGB>(leds, NUM_LEDS);
+  LEDS.setBrightness(BRIGHTNESS);
 }
 
-void fadeall() {  
-  uint8_t fadeAmt = map((triwave8((seconds16()) % 255) + 64) % 255, 0, 255, 251, 254);
-  for(int i = 0; i < NUM_LEDS; i++) { leds[i].nscale8(fadeAmt); }
-}
-
-
-
-void loop() { 
- handleButton();
-
-  if (briScale > briStep) {
-    leds[i] = CHSV(hue++, 255, dim8_raw( briScale ));
+void fadeall()
+{
+  uint8_t fadeAmt = map((triwave8((seconds16() / 4) % 255) + 64) % 255, 0, 255, 240, 251);
+  for (int i = 0; i < NUM_LEDS; i++)
+  {
+    leds[i].nscale8(fadeAmt);
   }
-  FastLED.show(); 
+}
+
+void loop()
+{
+  handleButton();
+
+  if (briScale > briStep)
+  {
+    leds[i] = CHSV(hue++, 255, dim8_raw(briScale));
+  }
+  FastLED.show();
   fadeall();
 
-  if (i == NUM_LEDS - 1) {
+  if (i == NUM_LEDS - 1)
+  {
     forward = false;
-	endReached();
-  } else if (i == 0) {
-    forward = true;
-	endReached();
-    // increase brightness at every complete cycle
-    if(isAutoBrightness) brightCycle();
+    endReached();
   }
- 
-  if (forward) {
+  else if (i == 0)
+  {
+    forward = true;
+    endReached();
+    // increase brightness at every complete cycle
+    if (isAutoBrightness)
+      brightCycle();
+  }
+
+  if (forward)
+  {
     i++;
-  } else {
+  }
+  else
+  {
     i--;
   }
-  
+
   delay(delayTime);
-
 }
 
-void endReached() {
-	for (int j = 0; j < skipAtEnds; j++) {
-		FastLED.show(); 	
-		fadeall();
-		delay(delayTime);
-	}
+void endReached()
+{
+  for (int j = 0; j < skipAtEnds; j++)
+  {
+    FastLED.show();
+    fadeall();
+    delay(delayTime);
+  }
 }
 
-void brightCycle() {
-   briScale = briScale + briStep;
-   briScale = constrain(briScale, 50, 255);
+void brightCycle()
+{
+  briScale = briScale + briStep;
+  briScale = constrain(briScale, 50, 255);
 }
 
-void handleButton() {
+void handleButton()
+{
   buttonState = digitalRead(BUTTON_PIN);
-  
+
   // event of button pressed or released
-  if (buttonState != prevButtonState) {	  
-   	hitCount++;
-	// button released
-	if (hitCount % 2 == 0 && millis() - lastStatusSwitch < 1000) {
-		isAutoBrightness = !isAutoBrightness;
-	}
-	lastStatusSwitch = millis(); 
+  if (buttonState != prevButtonState)
+  {
+    hitCount++;
+    // button released
+    if (hitCount % 2 == 0 && millis() - lastStatusSwitch < 1000)
+    {
+      isAutoBrightness = !isAutoBrightness;
+    }
+    lastStatusSwitch = millis();
   }
 
-  if (buttonState == LOW && millis()-lastStatusSwitch >= 1000) {
+  if (buttonState == LOW && millis() - lastStatusSwitch >= 1000)
+  {
     // increase or decrease brightness
-    if (hitCount % 4 == 1 && briScale < 255) {
+    if (hitCount % 4 == 1 && briScale < 255)
+    {
       briScale++;
-    } else if (hitCount % 4 == 3 && briScale > 0) {  
+    }
+    else if (hitCount % 4 == 3 && briScale > 0)
+    {
       briScale--;
     }
   }
-    
+
   prevButtonState = buttonState;
 }
