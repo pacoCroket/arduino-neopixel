@@ -1,33 +1,33 @@
 #include <FastLED.h>
 
 // How many leds in your strip?
-#define NUM_LEDS 300 
-#define BRIGHTNESS 150
+#define NUM_LEDS 200 
+#define BRIGHTNESS 130
 
 // For led chips like Neopixels, which have a data line, ground, and power, you just
-// need to define DATA_PIN.  For led chipsets that are SPI based (four wires - data, clock,
-// ground, and power), like the LPD8806, define both DATA_PIN and CLOCK_PIN
-#define DATA_PIN 3
+// need to define DATA_PIN1.  For led chipsets that are SPI based (four wires - data, clock,
+// ground, and power), like the LPD8806, define both DATA_PIN1 and CLOCK_PIN
+#define DATA_PIN1 3
+#define DATA_PIN2 5
 #define BUTTON_PIN 2
-#define CLOCK_PIN 13
 
 // Define the array of leds
 CRGB leds[NUM_LEDS];
 
-int outFrameSpace = 2; // virtual LEDs to add time between waves of color from the sides
-int delayTime = 28;
+uint8_t outFrameSpace = 2; // virtual LEDs to add time between waves of color from the sides
+uint8_t delayTime = 28;
 boolean forward = true;
 boolean isAutoBrightness = true;
 
 int i = 0;
-int skipAtEnds = 12;
+int skipAtEnds = 18;
 static uint8_t hue = 0;
 
 boolean buttonState = HIGH;
 boolean prevButtonState = HIGH;
 uint8_t hitCount = 0;
 uint8_t briScale = 128;
-uint8_t briStep = 32;
+uint8_t briStep = 24;
 unsigned long lastStatusSwitch = 999999;
 
 void setup() { 
@@ -37,12 +37,13 @@ void setup() {
 	// initialize the pushbutton pin as an input:
 	pinMode(BUTTON_PIN, INPUT_PULLUP);
 
-	LEDS.addLeds<WS2812,DATA_PIN,RGB>(leds,NUM_LEDS);
+	LEDS.addLeds<WS2812B,DATA_PIN1,RGB>(leds,NUM_LEDS);
+	LEDS.addLeds<WS2812B,DATA_PIN2,RGB>(leds,NUM_LEDS);
 	LEDS.setBrightness(BRIGHTNESS);
 }
 
 void fadeall() {  
-  uint8_t fadeAmt = map(briScale, 0, 255, 254, 250);
+  uint8_t fadeAmt = map((triwave8((seconds16()) % 255) + 64) % 255, 0, 255, 251, 254);
   for(int i = 0; i < NUM_LEDS; i++) { leds[i].nscale8(fadeAmt); }
 }
 
@@ -87,7 +88,7 @@ void endReached() {
 
 void brightCycle() {
    briScale = briScale + briStep;
-   briScale = constrain(briScale, briStep, 255);
+   briScale = constrain(briScale, 50, 255);
 }
 
 void handleButton() {
