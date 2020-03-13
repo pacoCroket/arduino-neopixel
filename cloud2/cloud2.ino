@@ -16,6 +16,7 @@ const PROGMEM int ledsArray[NUM_LEDS][3] = {{29, 20, 4}, {29, 19, 7}, {29, 18, 1
 {0, 5, 11}, {0, 3, 8}, {1, 1, 6}, {6, 5, 0}, {9, 5, 0}, {12, 5, 0}, {15, 22, 0}, {12, 22, 0}, {9, 22, 0}, {0, 21, 10}, {1, 24, 12}, {3, 24, 14},
 {6, 26, 20}, {13, 30, 18}, {14, 30, 16}, {17, 26, 14}, {26, 24, 22}, {29, 26, 22}, {31, 29, 22}, {32, 29, 22}, {30, 24, 22}, {29, 22, 22}};
 
+
 // The leds
 CRGB leds[NUM_LEDS];
 
@@ -24,10 +25,10 @@ static double x;
 static double y;
 static double z;
 
-double speedFactor = 0.8;
+double speedFactor = 0.2;
 double speed = 6 * speedFactor; // speed is set dynamically once we've started up
 double newspeed = speed;
-double scaleFactor = 0.6; 
+double scaleFactor = 1.2; 
 double scale = 6 * scaleFactor; // scale is set dynamically once we've started up
 double newscale = scale;
 uint8_t       colorLoop = 1;
@@ -66,8 +67,8 @@ void mapCoordToColor() {
   static uint8_t ihue=0;
     
   uint8_t dataSmoothing = 0;
-  if( speed < 5) {
-    dataSmoothing = 200 - (speed * 4);
+  if( speed < 4) {
+    dataSmoothing = 220 - (speed * 5);
   }
 
   for (uint8_t i = 0; i < NUM_LEDS; i++) {
@@ -169,18 +170,18 @@ void ChangePaletteAndSettingsPeriodically()
   
   if( lastSecond != secondHand && isSwitchingPalette) {
     lastSecond = secondHand;
-    if( secondHand == 0)  { targetPalette = LavaColors_p;            newspeed =  7 * speedFactor; newscale = 7 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 5)  { SetupBlackAndWhiteStripedPalette();       newspeed = 35 * speedFactor; newscale = 5 * scaleFactor; colorLoop = 1; }
-    if( secondHand ==  10)  { SetupPurpleAndGreenPalette();             newspeed = 1 * speedFactor; newscale = 4 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 20)  { SetupRandomPalette();                     newspeed = 7 * speedFactor; newscale = 7 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 0)  { targetPalette = LavaColors_p;            speed =  7 * speedFactor; scale = 7 * scaleFactor; colorLoop = 0; }
+    if( secondHand == 6)  { SetupBlackAndWhiteStripedPalette();       speed = 50 * speedFactor; scale = 5 * scaleFactor; colorLoop = 1; }
+    if( secondHand ==  15)  { SetupPurpleAndGreenPalette();             speed = 1 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 25)  { SetupRandomPalette();                     speed = 10 * speedFactor; scale = 7 * scaleFactor; colorLoop = 1; }
 //    if( secondHand == 15)  { currentPalette = ForestColors_p;          speed =  3; scale = 8 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 25)  { targetPalette = CloudColors_p;           newspeed =  8 * speedFactor; newscale = 7 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 30)  { targetPalette = RainbowColors_p;         newspeed = 12 * speedFactor; newscale = 5 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 35)  { SetupRandomPalette();                     newspeed = 7 * speedFactor; newscale = 15 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 40)  { targetPalette = OceanColors_p;           newspeed = 20 * speedFactor; newscale = 25 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 45)  { targetPalette = PartyColors_p;           newspeed = 12 * speedFactor; newscale = 4 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 50)  { SetupRandomPalette();                     newspeed = 20 * speedFactor; newscale = 6 * scaleFactor; colorLoop = 1; }
-    if( secondHand == 55)  { targetPalette = RainbowStripeColors_p;   newspeed = 10 * speedFactor; newscale = 4 * scaleFactor; colorLoop = 1; }
+    // if( secondHand == 15)  { targetPalette = CloudColors_p;           speed =  8 * speedFactor; scale = 7 * scaleFactor; colorLoop = 0; }
+    if( secondHand == 35)  { targetPalette = RainbowColors_p;         speed = 12 * speedFactor; scale = 5 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 40)  { SetupRandomPalette();                     speed = 7 * speedFactor; scale = 15 * scaleFactor; colorLoop = 1; }
+    // if( secondHand == 30)  { targetPalette = OceanColors_p;           speed = 18 * speedFactor; scale = 25 * scaleFactor; colorLoop = 0; }
+    if( secondHand == 45)  { targetPalette = PartyColors_p;           speed = 12 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 53)  { SetupRandomPalette();                     speed = 25 * speedFactor; scale = 6 * scaleFactor; colorLoop = 1; }
+    // if( secondHand == 55)  { targetPalette = RainbowStripeColors_p;   speed = 10 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
   }
 }
 
@@ -199,9 +200,9 @@ void SetupBlackAndWhiteStripedPalette()
   // 'black out' all 16 palette entries...
   fill_solid( targetPalette, 16, CRGB::Black);
   // and set every fourth one to white.
-  targetPalette[0] = CRGB::White;
-//  targetPalette[9] = CRGB::White;
-  targetPalette[11] = CRGB::White;
+//  targetPalette[0] = CRGB::White;
+  targetPalette[9] = CRGB::White;
+//  targetPalette[11] = CRGB::White;
 }
 
 // This function sets up a palette of purple and green stripes.
