@@ -171,7 +171,7 @@ void ChangePaletteAndSettingsPeriodically()
   if( lastSecond != secondHand && isSwitchingPalette) {
     lastSecond = secondHand;
     if( secondHand == 0)  { targetPalette = LavaColors_p;            speed =  7 * speedFactor; scale = 7 * scaleFactor; colorLoop = 0; }
-    if( secondHand == 6)  { SetupBlackAndWhiteStripedPalette();       speed = 50 * speedFactor; scale = 5 * scaleFactor; colorLoop = 1; }
+    if( secondHand == 6)  { SetupBlackAndWhiteStripedPalette();       speed = 70 * speedFactor; scale = 5 * scaleFactor; colorLoop = 1; }
     if( secondHand ==  15)  { SetupPurpleAndGreenPalette();             speed = 1 * speedFactor; scale = 4 * scaleFactor; colorLoop = 1; }
     if( secondHand == 25)  { SetupRandomPalette();                     speed = 10 * speedFactor; scale = 7 * scaleFactor; colorLoop = 1; }
 //    if( secondHand == 15)  { currentPalette = ForestColors_p;          speed =  3; scale = 8 * scaleFactor; colorLoop = 0; }
