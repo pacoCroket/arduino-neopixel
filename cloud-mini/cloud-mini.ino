@@ -21,7 +21,8 @@ static double x;
 static double y;
 static double z;
 
-double speedFactor = 0.07;
+double hueSpeed = 0.3;
+double speedFactor = 0.15;
 double speed = 6 * speedFactor; // speed is set dynamically once we've started up
 double newspeed = speed;
 double scaleFactor = 0.6;
@@ -62,7 +63,7 @@ void mapCoordToColor()
   // from frame-to-frame.  In order to reduce this, we can do some fast data-smoothing.
   // The amount of data smoothing we're doing depends on "speed".
 
-  static uint8_t ihue = 0;
+  static double ihue = 0;
 
   uint8_t dataSmoothing = 0;
   if (speed < 4)
@@ -105,7 +106,7 @@ void mapCoordToColor()
   x += speed / 2;
   y -= speed / 4;
 
-  ihue += 1;
+  ihue += hueSpeed;
 }
 
 void loop()
@@ -193,14 +194,14 @@ void ChangePaletteAndSettingsPeriodically()
       SetupBlackAndWhiteStripedPalette();
       speed = 70 * speedFactor;
       scale = 5 * scaleFactor;
-      colorLoop = 1;
+      colorLoop = 0;
     }
     if (secondHand == 15)
     {
       SetupPurpleAndGreenPalette();
       speed = 1 * speedFactor;
       scale = 4 * scaleFactor;
-      colorLoop = 1;
+      colorLoop = 0;
     }
     if (secondHand == 25)
     {
