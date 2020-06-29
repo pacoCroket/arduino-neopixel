@@ -4,9 +4,9 @@
 #define LED_PIN 3
 #define LED_PIN2 5
 #define BRIGHTNESS 115
-#define LED_TYPE WS2812
+#define LED_TYPE WS2812B
 #define COLOR_ORDER GRB // GRB for WS2812, BRG for WS2811
-#define NUM_LEDS 88
+#define NUM_LEDS 138
 #define NUM_LEDS2 13
 
 // The leds
@@ -14,30 +14,29 @@ CRGB leds[NUM_LEDS];
 CRGB leds2[NUM_LEDS2];
 
 static double x;
-static double y;
 static double z;
 
 /////// SETTINGS
 #define HOLD_PALETTES_X_TIMES_AS_LONG 8
-#define UPDATES_PER_SECOND 20
-double speedFactor = 0.5;
-double hueSpeedFactor = 0.25;
-double scaleFactor = 0.5;
-double scaleFactor2 = 4;
+#define UPDATES_PER_SECOND 60
+double speedFactor = 0.25;
+double hueSpeedFactor = 1;
+double scaleFactor = 1;
+double scaleFactor2 = 2;
 uint8_t maxChanges = 3;
-double lerpSpeed = 0.0001;
+double lerpSpeed = 0.000001;
 ////////
-double lerpAmount = 0;
+double lerpAmount = 1;
 double speed = 4 * speedFactor; // speed is set dynamically once we've started up
 double newspeed = speed;
 double scale = 4 * scaleFactor; // scale is set dynamically once we've started up
 double newscale = scale;
-uint8_t colorLoop = 1;
+uint8_t colorLoop = 0;
 static double ihue = 0;
 
 // for blending in palettes smoothly
-CRGBPalette16 targetPalette(PartyColors_p);
-CRGBPalette16 currentPalette(PartyColors_p);
+CRGBPalette16 targetPalette(LavaColors_p);
+CRGBPalette16 currentPalette(LavaColors_p);
 
 void setup()
 {
@@ -49,9 +48,8 @@ void setup()
     LEDS.setBrightness(BRIGHTNESS);
 
     // Initialize our coordinates to some random values
-    x = random8();
-    z = random8();
-    y = random8();
+    x = random16() + 0.5;
+    z = random16();
 }
 
 void mapCoordToColor()
@@ -66,25 +64,25 @@ void mapCoordToColor()
     {
         // first value is the radius
 
-        int xoffset = i * scale;
-        double z_frac = (1.0 / 30.0) * (i % 30);
-        // double z_frac = 0;
+        int xoffset = i * scale * (NUM_LEDS > 86 ? 4 : 1);
+        // double z_frac = (1.0 / 30.0) * (i % 30);
+        double z_frac = 0;
         uint8_t index = inoise8(x + xoffset + z_frac, z + z_frac);
         uint8_t bri = inoise8(x - z_frac, z + xoffset - z_frac); // another random point for brightness
 
         if (dataSmoothing)
         {
-            uint8_t oldindex = inoise8(x + xoffset - speed / 2 + z_frac, z - speed + z_frac);
-            uint8_t oldbri = inoise8(x - speed / 2 - z_frac, z - speed + xoffset - z_frac);
+            uint8_t oldindex = inoise8(x + xoffset - speed + z_frac, z - speed + z_frac);
+            uint8_t oldbri = inoise8(x - speed - z_frac, z - speed + xoffset - z_frac);
             index = scale8(oldindex, dataSmoothing) + scale8(index, 256 - dataSmoothing);
             bri = scale8(oldbri, dataSmoothing) + scale8(index, 256 - dataSmoothing);
         }
 
         // if this palette is a 'loop', add a slowly-changing base value
-        if (colorLoop)
-        {
-            index += ihue;
-        }
+        // if (colorLoop)
+        // {
+        //     index += ihue;
+        // }
 
         // brighten up, as the color palette itself often contains the
         // light/dark dynamic range desired
@@ -94,7 +92,7 @@ void mapCoordToColor()
         }
         else
         {
-            bri = dim8_video(bri * 2);
+            bri = dim8_raw(bri * 2);
         }
 
         CRGB color = ColorFromPalette(currentPalette, index, bri);
@@ -114,24 +112,25 @@ void mapCoordToColor2()
     {
         // first value is the radius
 
-        int xoffset = i * scale * scaleFactor2;
-        double z_frac = (1.0 / 10.0) * (i % 10);
-        uint8_t index = inoise8(y + xoffset + z_frac, z + z_frac);
+        int xoffset = (i + NUM_LEDS) * scale * scaleFactor2;
+        // double z_frac = (1.0 / 10.0) * (i % 10);
+        double z_frac = 0;
+        uint8_t index = inoise8(x + xoffset + z_frac, z + z_frac);
         // uint8_t bri = inoise8(y, z + xoffset); // another random point for brightness
 
         if (dataSmoothing)
         {
-            uint8_t oldindex = inoise8(y + xoffset - speed / 2 + z_frac, z - speed + z_frac);
+            uint8_t oldindex = inoise8(x + xoffset - speed + z_frac, z - speed + z_frac);
             // uint8_t oldbri = inoise8(y - speed / 2, z - speed + xoffset);
             index = scale8(oldindex, dataSmoothing) + scale8(index, 256 - dataSmoothing);
             // bri = scale8(oldbri, dataSmoothing) + scale8(index, 256 - dataSmoothing);
         }
 
         // if this palette is a 'loop', add a slowly-changing base value
-        if (colorLoop)
-        {
-            index += ihue;
-        }
+        // if (colorLoop)
+        // {
+        //     index += ihue;
+        // }
 
         // brighten up, as the color palette itself often contains the
         // light/dark dynamic range desired
@@ -162,7 +161,7 @@ void loop()
 
     nblendPaletteTowardPalette(currentPalette, targetPalette, maxChanges);
 
-    if (lerpAmount <= 1)
+    if (lerpAmount < 1)
     {
         speed = (1 - lerpAmount) * speed + newspeed * lerpAmount;
         scale = (1 - lerpAmount) * scale + newscale * lerpAmount;
@@ -173,9 +172,8 @@ void loop()
     mapCoordToColor2();
 
     z += speed;
-    x += speed / 2.0;
-    y += speed / 2.0;
-    ihue += hueSpeedFactor;
+    x += speed;
+    // ihue += hueSpeedFactor;
 
     LEDS.show();
     LEDS.delay(1000 / UPDATES_PER_SECOND);
