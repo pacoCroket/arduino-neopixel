@@ -4,8 +4,8 @@
 // LED
 #define LED_PIN 3
 #define BRIGHTNESS 255
-#define LED_TYPE WS2811
-#define COLOR_ORDER BRG // GRB for WS2812, BRG for WS2811
+#define LED_TYPE WS2812
+#define COLOR_ORDER GRB // GRB for WS2812, BRG for WS2811
 #define NUM_LEDS 130
 #define BUTTON_PIN 2
 
@@ -15,20 +15,32 @@ CRGB leds[NUM_LEDS];
 static double x;
 static double z;
 
-double speedFactor = 0.15;
+// SETTINGS
+#define HOLD_PALETTES_X_TIMES_AS_LONG 8
+#define UPDATES_PER_SECOND 24
+
+double speedFactor = 1 / 64;
 double speed = 6 * speedFactor; // speed is set dynamically once we've started up
 double newspeed = speed;
-double scaleFactor = 2;
-double scale = 6 * scaleFactor; // scale is set dynamically once we've started up
+double scaleFactor = 4;
+double scale = 4 * scaleFactor; // scale is set dynamically once we've started up
 double newscale = scale;
 uint8_t colorLoop = 1;
+// lerp variables
+uint8_t maxChanges = 3;
+double lerpSpeed = 0.00001;
+double scaleDiff = 0;
+double speedDiff = 0;
+double speedStepSize = 0;
+double scaleStepSize = 0;
+double lerpStepCurrent = 1;
 
-// for blending in palettes smoothly
-uint8_t maxChanges = 48;
-uint8_t countBlend = 0;
-float lerpAmount = 0.1;
-CRGBPalette16 targetPalette(LavaColors_p);
-CRGBPalette16 currentPalette(LavaColors_p);
+// Kitchen LEDs use higher LED density and make a spiral from about LED #90
+uint8_t ledsCloserFromId = 90;
+
+////////
+CRGBPalette16 targetPalette(RainbowColors_p);
+CRGBPalette16 currentPalette(RainbowColors_p);
 
 // Instantiate a Bounce object
 Bounce debouncer = Bounce();
@@ -44,6 +56,7 @@ void setup()
 {
   //  Serial.begin(9600);
 
+  LEDS.setMaxPowerInVoltsAndMilliamps(5, 1000);
   LEDS.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS);
   LEDS.setBrightness(BRIGHTNESS);
 
@@ -51,12 +64,12 @@ void setup()
   x = random8();
   z = random8();
 
-  // Setup the button with an internal pull-up :
-  pinMode(BUTTON_PIN, INPUT_PULLUP);
-
-  // After setting up the button, setup the Bounce instance :
-  debouncer.attach(BUTTON_PIN);
-  debouncer.interval(10); // interval in ms
+  //  // Setup the button with an internal pull-up :
+  //  pinMode(BUTTON_PIN, INPUT_PULLUP);
+  //
+  //  // After setting up the button, setup the Bounce instance :
+  //  debouncer.attach(BUTTON_PIN);
+  //  debouncer.interval(10); // interval in ms
 }
 
 void handleButton()
@@ -115,18 +128,24 @@ void mapCoordToColor()
 
   for (int i = 0; i < NUM_LEDS; i++)
   {
-    // first value is the radius
-
-    uint16_t xoffset = i * scale;
+    uint16_t xoffset;
+    if (i < ledsCloserFromId)
+    {
+      xoffset = i * scale;
+    }
+    else
+    {
+      xoffset = scale * (ledsCloserFromId + 0.5 * (ledsCloserFromId - i));
+    }
 
     uint8_t index = inoise8(x + xoffset, z);
     uint8_t bri = inoise8(x, z + xoffset); // another random point for brightness
 
     if (dataSmoothing)
     {
-      uint8_t oldindex = inoise8(x + xoffset - speed / 8, z - speed / 2);
+      uint8_t oldindex = inoise8(x + xoffset - speed / 4, z - speed / 2);
       index = scale8(oldindex, dataSmoothing) + scale8(index, 256 - dataSmoothing);
-      uint8_t oldbri = inoise8(x - speed / 8, z - speed / 2 + xoffset);
+      uint8_t oldbri = inoise8(x - speed / 4, z - speed / 2 + xoffset);
       bri = scale8(oldbri, dataSmoothing) + scale8(index, 256 - dataSmoothing);
     }
 
@@ -136,7 +155,14 @@ void mapCoordToColor()
       index += ihue;
     }
 
-    bri = dim8_raw(scale8(bri, briScale));
+    if (bri > 127)
+    {
+      bri = 255;
+    }
+    else
+    {
+      bri = dim8_raw(bri * 2);
+    }
 
     CRGB color = ColorFromPalette(currentPalette, index, bri);
     leds[i] = color;
@@ -144,37 +170,45 @@ void mapCoordToColor()
 
   z += speed / 2;
   // apply slow drift to X and Y, just for visual variation.
-  x += speed / 8;
+  x += speed / 4;
 
   ihue++;
 }
 
 void loop()
 {
-  handleButton();
+  //  handleButton();
 
   // Periodically choose a new palette, speed, and scale
   ChangePaletteAndSettingsPeriodically();
 
-  // run the blend function only every Nth frames
-  if (countBlend == 5)
+  nblendPaletteTowardPalette(currentPalette, targetPalette, maxChanges);
+
+  if (lerpStepCurrent < 1)
   {
-    nblendPaletteTowardPalette(currentPalette, targetPalette, maxChanges);
-    countBlend = 0;
+    speed += speedStepSize;
+    scale += scaleStepSize;
+    lerpStepCurrent += lerpSpeed;
   }
-  else if (countBlend == 1 && speed != newspeed)
-  {
-    speed = (1 - lerpAmount) * speed + newspeed * lerpAmount;
-    scale = (1 - lerpAmount) * scale + newscale * lerpAmount;
-  }
-  countBlend++;
 
   mapCoordToColor();
   LEDS.show();
-  //   delay(20);
+  LEDS.delay(1000 / UPDATES_PER_SECOND);
 }
 
-#define HOLD_PALETTES_X_TIMES_AS_LONG 8
+void setPalette(CRGBPalette16 _targetPallete, double _newspeed, double _newscale, uint8_t _colorLoop)
+{
+  targetPalette = _targetPallete;
+  newspeed = _newspeed * speedFactor;
+  newscale = _newscale * scaleFactor;
+  colorLoop = _colorLoop;
+  // lerp variables
+  speedDiff = speed - newspeed;
+  scaleDiff = scale - newscale;
+  speedStepSize = speedDiff * lerpSpeed;
+  scaleStepSize = scaleDiff * lerpSpeed;
+  lerpStepCurrent = 0;
+}
 
 void ChangePaletteAndSettingsPeriodically()
 {
@@ -186,95 +220,54 @@ void ChangePaletteAndSettingsPeriodically()
     lastSecond = secondHand;
     if (secondHand == 0)
     {
-      targetPalette = LavaColors_p;
-      newspeed = 4 * speedFactor;
-      newscale = 4 * scaleFactor;
-      colorLoop = 0;
+      setPalette(LavaColors_p, 4, 4, 0);
     }
-    // if (secondHand == 5)
-    // {
-    //   SetupBlackAndWhiteStripedPalette();
-    //   newspeed = 35 * speedFactor;
-    //   newscale = 5 * scaleFactor;
-    //   colorLoop = 0;
-    // }
     if (secondHand == 8)
     {
-      SetupPurpleAndGreenPalette();
-      newspeed = 4 * speedFactor;
-      newscale = 6 * scaleFactor;
-      colorLoop = 1;
+      setPalette(getPurpleAndGreenPalette(), 4, 6, 1);
     }
     if (secondHand == 15)
     {
-      SetupRandomPalette();
-      newspeed = 6 * speedFactor;
-      newscale = 2 * scaleFactor;
-      colorLoop = 1;
+      setPalette(getRandomPalette(), 6, 2, 1);
     }
-    //    if( secondHand == 15)  { currentPalette = ForestColors_p;          speed =  3; scale = 8 * scaleFactor; colorLoop = 0; }
-    // if (secondHand == 25)
-    // {
-    //   targetPalette = CloudColors_p;
-    //   newspeed = 8 * speedFactor;
-    //   newscale = 7 * scaleFactor;
-    //   colorLoop = 1;
-    // }
     if (secondHand == 25)
     {
-      targetPalette = RainbowColors_p;
-      newspeed = 6 * speedFactor;
-      newscale = 4 * scaleFactor;
-      colorLoop = 1;
+      setPalette(RainbowColors_p, 6, 4, 1);
     }
     if (secondHand == 35)
     {
-      SetupRandomPalette();
-      newspeed = 4 * speedFactor;
-      newscale = 8 * scaleFactor;
-      colorLoop = 1;
+      setPalette(getRandomPalette(), 4, 8, 1);
     }
     if (secondHand == 40)
     {
-      targetPalette = OceanColors_p;
-      newspeed = 8 * speedFactor;
-      newscale = 16 * scaleFactor;
-      colorLoop = 1;
+      setPalette(OceanColors_p, 8, 16, 1);
     }
     if (secondHand == 45)
     {
-      targetPalette = PartyColors_p;
-      newspeed = 6 * speedFactor;
-      newscale = 4 * scaleFactor;
-      colorLoop = 1;
+      setPalette(PartyColors_p, 6, 4, 1);
     }
     if (secondHand == 50)
     {
-      SetupRandomPalette();
-      newspeed = 4 * speedFactor;
-      newscale = 2 * scaleFactor;
-      colorLoop = 1;
+
+      setPalette(getRandomPalette(), 4, 2, 1);
     }
     if (secondHand == 55)
     {
-      targetPalette = RainbowStripeColors_p;
-      newspeed = 4 * speedFactor;
-      newscale = 4 * scaleFactor;
-      colorLoop = 1;
+      setPalette(RainbowStripeColors_p, 4, 4, 1);
     }
   }
 }
 
-void SetupRandomPalette()
+CRGBPalette16 getRandomPalette()
 {
-  targetPalette = CRGBPalette16(
+  return CRGBPalette16(
       CHSV(random8(), 255, 32),
       CHSV(random8(), 255, 255),
       CHSV(random8(), 128, 255),
       CHSV(random8(), 255, 255));
 }
 
-void SetupBlackAndWhiteStripedPalette()
+CRGBPalette16 getBlackAndWhiteStripedPalette()
 {
   // 'black out' all 16 palette entries...
   fill_solid(targetPalette, 16, CRGB::Black);
@@ -282,16 +275,17 @@ void SetupBlackAndWhiteStripedPalette()
   targetPalette[0] = CRGB::White;
   //  targetPalette[9] = CRGB::White;
   targetPalette[11] = CRGB::White;
+  return targetPalette;
 }
 
 // This function sets up a palette of purple and green stripes.
-void SetupPurpleAndGreenPalette()
+CRGBPalette16 getPurpleAndGreenPalette()
 {
   CRGB purple = CHSV(HUE_PURPLE, 255, 255);
   CRGB green = CHSV(HUE_GREEN, 255, 255);
   CRGB black = CRGB::Black;
 
-  targetPalette = CRGBPalette16(
+  return CRGBPalette16(
       green, green, black, black,
       purple, purple, black, black,
       green, green, black, black,
