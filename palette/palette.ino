@@ -19,24 +19,29 @@ static double z;
 /////// SETTINGS
 #define HOLD_PALETTES_X_TIMES_AS_LONG 8
 #define UPDATES_PER_SECOND 60
-double speedFactor = 0.25;
+double speedFactor = 1 / 8;
 double hueSpeedFactor = 1;
 double scaleFactor = 1;
 double scaleFactor2 = 2;
-uint8_t maxChanges = 3;
-double lerpSpeed = 0.000001;
 ////////
-double lerpAmount = 1;
 double speed = 4 * speedFactor; // speed is set dynamically once we've started up
 double newspeed = speed;
 double scale = 4 * scaleFactor; // scale is set dynamically once we've started up
 double newscale = scale;
 uint8_t colorLoop = 0;
 static double ihue = 0;
+// lerp variables
+uint8_t maxChanges = 3;
+double lerpSpeed = 0.000001;
+double scaleDiff = 0;
+double speedDiff = 0;
+double speedStepSize = 0;
+double scaleStepSize = 0;
+double lerpStepCurrent = 1;
 
 // for blending in palettes smoothly
-CRGBPalette16 targetPalette(LavaColors_p);
-CRGBPalette16 currentPalette(LavaColors_p);
+CRGBPalette16 targetPalette(RainbowColors_p);
+CRGBPalette16 currentPalette(RainbowColors_p);
 
 void setup()
 {
@@ -161,11 +166,11 @@ void loop()
 
     nblendPaletteTowardPalette(currentPalette, targetPalette, maxChanges);
 
-    if (lerpAmount < 1)
+    if (lerpStepCurrent < 1)
     {
-        speed = (1 - lerpAmount) * speed + newspeed * lerpAmount;
-        scale = (1 - lerpAmount) * scale + newscale * lerpAmount;
-        lerpAmount += lerpSpeed;
+        speed += speedStepSize;
+        scale += scaleStepSize;
+        lerpStepCurrent += lerpSpeed;
     }
 
     mapCoordToColor();
@@ -179,99 +184,64 @@ void loop()
     LEDS.delay(1000 / UPDATES_PER_SECOND);
 }
 
+void setPalette(CRGBPalette16 _targetPallete, double _newspeed, double _newscale, uint8_t _colorLoop)
+{
+    targetPalette = _targetPallete;
+    newspeed = _newspeed * speedFactor;
+    newscale = _newscale * scaleFactor;
+    colorLoop = _colorLoop;
+    // lerp variables
+    speedDiff = speed - newspeed;
+    scaleDiff = scale - newscale;
+    speedStepSize = speedDiff * lerpSpeed;
+    scaleStepSize = scaleDiff * lerpSpeed;
+    lerpStepCurrent = 0;
+}
+
 void ChangePaletteAndSettingsPeriodically()
 {
     uint8_t secondHand = ((millis() / 1000) / HOLD_PALETTES_X_TIMES_AS_LONG) % 60;
     static uint8_t lastSecond = 99;
 
-    if (lastSecond != secondHand)
+    if (lastSecond != secondHand && isSwitchingPalette)
     {
         lastSecond = secondHand;
         if (secondHand == 0)
         {
-            targetPalette = LavaColors_p;
-            newspeed = 4 * speedFactor;
-            newscale = 4 * scaleFactor;
-            resetLerp();
+            setPalette(LavaColors_p, 4, 4, 0);
         }
-        // if (secondHand == 5)
-        // {
-        //   SetupBlackAndWhiteStripedPalette();
-        //   newspeed = 35 * speedFactor;
-        //   newscale = 5 * scaleFactor;
-        //   colorLoop = 0;
-        // }
         if (secondHand == 8)
         {
-            SetupPurpleAndGreenPalette();
-            newspeed = 4 * speedFactor;
-            newscale = 6 * scaleFactor;
-            resetLerp();
-            // colorLoop = 1;
+            setPalette(getPurpleAndGreenPalette(), 4, 6, 1);
         }
         if (secondHand == 15)
         {
-            SetupRandomPalette();
-            newspeed = 6 * speedFactor;
-            newscale = 2 * scaleFactor;
-            colorLoop = 1;
-            resetLerp();
+            setPalette(getRandomPalette(), 6, 2, 1);
         }
-        //    if( secondHand == 15)  { currentPalette = ForestColors_p;          speed =  3; scale = 8 * scaleFactor; colorLoop = 0; }
-        // if (secondHand == 25)
-        // {
-        //   targetPalette = CloudColors_p;
-        //   newspeed = 8 * speedFactor;
-        //   newscale = 7 * scaleFactor;
-        //   colorLoop = 1;
-        // }
         if (secondHand == 25)
         {
-            targetPalette = RainbowColors_p;
-            newspeed = 6 * speedFactor;
-            newscale = 4 * scaleFactor;
-            colorLoop = 1;
-            resetLerp();
+            setPalette(RainbowColors_p, 6, 4, 1);
         }
         if (secondHand == 35)
         {
-            SetupRandomPalette();
-            newspeed = 4 * speedFactor;
-            newscale = 8 * scaleFactor;
-            colorLoop = 1;
-            resetLerp();
+            setPalette(getRandomPalette(), 4, 8, 1);
         }
         if (secondHand == 40)
         {
-            targetPalette = OceanColors_p;
-            newspeed = 8 * speedFactor;
-            newscale = 16 * scaleFactor;
-            resetLerp();
-            // colorLoop = 1;
+            setPalette(OceanColors_p, 8, 16, 1);
         }
         if (secondHand == 45)
         {
-            targetPalette = PartyColors_p;
-            newspeed = 6 * speedFactor;
-            newscale = 4 * scaleFactor;
-            colorLoop = 1;
-            resetLerp();
+            setPalette(PartyColors_p, 6, 4, 1);
         }
         if (secondHand == 50)
         {
-            SetupRandomPalette();
-            newspeed = 4 * speedFactor;
-            newscale = 2 * scaleFactor;
-            colorLoop = 1;
-            resetLerp();
+
+            setPalette(getRandomPalette(), 4, 2, 1);
         }
         if (secondHand == 55)
         {
-            targetPalette = RainbowStripeColors_p;
-            newspeed = 4 * speedFactor;
-            newscale = 4 * scaleFactor;
-            colorLoop = 1;
-            resetLerp();
+            setPalette(RainbowStripeColors_p, 4, 4, 1);
         }
     }
 }
