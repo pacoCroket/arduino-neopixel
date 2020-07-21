@@ -1,4 +1,3 @@
-#include <Bounce2.h>
 #include <FastLED.h>
 
 // LED
@@ -17,39 +16,31 @@ static double z;
 
 // SETTINGS
 #define HOLD_PALETTES_X_TIMES_AS_LONG 8
-#define UPDATES_PER_SECOND 24
+#define UPDATES_PER_SECOND 20
 
-double speedFactor = 1 / 64;
+double speedFactor = 0.0625;
+double scaleFactor = 2;
 double speed = 6 * speedFactor; // speed is set dynamically once we've started up
-double newspeed = speed;
-double scaleFactor = 4;
 double scale = 4 * scaleFactor; // scale is set dynamically once we've started up
+//
 double newscale = scale;
+double newspeed = speed;
 uint8_t colorLoop = 1;
 // lerp variables
-uint8_t maxChanges = 3;
-double lerpSpeed = 0.00001;
+uint8_t maxChanges = 8;
+uint8_t lerpDuration = 15;
+double lerpSpeed = 1.0 / (UPDATES_PER_SECOND * lerpDuration);
 double scaleDiff = 0;
 double speedDiff = 0;
 double speedStepSize = 0;
 double scaleStepSize = 0;
-double lerpStepCurrent = 1;
-
+double lerpStepCurrent = 0;
 // Kitchen LEDs use higher LED density and make a spiral from about LED #90
 uint8_t ledsCloserFromId = 90;
 
-////////
+// for blending in palettes smoothly
 CRGBPalette16 targetPalette(RainbowColors_p);
 CRGBPalette16 currentPalette(RainbowColors_p);
-
-// Instantiate a Bounce object
-Bounce debouncer = Bounce();
-
-boolean buttonState = LOW;
-boolean prevButtonState = LOW;
-uint8_t pressCount = 0;
-unsigned long lastStatusSwitch = 999999;
-uint8_t briScale = 255;
 boolean isSwitchingPalette = true;
 
 void setup()
@@ -63,57 +54,6 @@ void setup()
   // Initialize our coordinates to some random values
   x = random8();
   z = random8();
-
-  //  // Setup the button with an internal pull-up :
-  //  pinMode(BUTTON_PIN, INPUT_PULLUP);
-  //
-  //  // After setting up the button, setup the Bounce instance :
-  //  debouncer.attach(BUTTON_PIN);
-  //  debouncer.interval(10); // interval in ms
-}
-
-void handleButton()
-{
-  // Update the Bounce instance :
-  debouncer.update();
-
-  // Get the updated value :
-  buttonState = debouncer.read();
-
-  if (buttonState != prevButtonState)
-  {
-    pressCount++;
-
-    // button released
-    if (pressCount % 2 == 0)
-    {
-      // change pallete if pressed and released within 1 sec
-      if (millis() - lastStatusSwitch < 1000)
-      {
-        isSwitchingPalette = !isSwitchingPalette;
-      }
-
-      // button pressed
-    }
-    // else {}
-    // record last state change
-    lastStatusSwitch = millis();
-  }
-
-  if (buttonState == LOW && millis() - lastStatusSwitch >= 1000)
-  {
-    // increase or decrease brightness
-    if (pressCount % 4 == 1 && briScale < 255)
-    {
-      briScale++;
-    }
-    else if (pressCount % 4 == 3 && briScale > 0)
-    {
-      briScale--;
-    }
-  }
-
-  prevButtonState = buttonState;
 }
 
 void mapCoordToColor()
@@ -135,7 +75,8 @@ void mapCoordToColor()
     }
     else
     {
-      xoffset = scale * (ledsCloserFromId + 0.5 * (ledsCloserFromId - i));
+      //      xoffset = scale * (ledsCloserFromId + 0.8 * (ledsCloserFromId - i - 70));-
+      xoffset = scale * (ledsCloserFromId - 50) - (i - ledsCloserFromId) * scale * 4;
     }
 
     uint8_t index = inoise8(x + xoffset, z);
@@ -150,10 +91,10 @@ void mapCoordToColor()
     }
 
     // if this palette is a 'loop', add a slowly-changing base value
-    if (colorLoop)
-    {
-      index += ihue;
-    }
+    // if (colorLoop)
+    // {
+    //   index += ihue;
+    // }
 
     if (bri > 127)
     {
@@ -184,10 +125,19 @@ void loop()
 
   nblendPaletteTowardPalette(currentPalette, targetPalette, maxChanges);
 
-  if (lerpStepCurrent < 1)
+  if (lerpStepCurrent < 1.0)
   {
-    speed += speedStepSize;
-    scale += scaleStepSize;
+    if (lerpStepCurrent < 0.5)
+    {
+
+      speed += 2 * speedStepSize * lerpStepCurrent;
+      scale += 2 * scaleStepSize * lerpStepCurrent;
+    }
+    else
+    {
+      speed += 2 * speedStepSize * (1 - lerpStepCurrent);
+      scale += 2 * scaleStepSize * (1 - lerpStepCurrent);
+    }
     lerpStepCurrent += lerpSpeed;
   }
 

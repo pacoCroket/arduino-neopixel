@@ -18,30 +18,33 @@ static double z;
 
 /////// SETTINGS
 #define HOLD_PALETTES_X_TIMES_AS_LONG 8
-#define UPDATES_PER_SECOND 60
-double speedFactor = 1 / 8;
+#define UPDATES_PER_SECOND 30
+double speedFactor = 0.25;
 double hueSpeedFactor = 1;
 double scaleFactor = 1;
 double scaleFactor2 = 2;
+uint8_t lowResStripeStart = 87;
 ////////
-double speed = 4 * speedFactor; // speed is set dynamically once we've started up
+double speed = 1 * speedFactor; // speed is set dynamically once we've started up
 double newspeed = speed;
-double scale = 4 * scaleFactor; // scale is set dynamically once we've started up
+double scale = 16 * scaleFactor; // scale is set dynamically once we've started up
 double newscale = scale;
-uint8_t colorLoop = 0;
+uint8_t colorLoop = 1;
 static double ihue = 0;
 // lerp variables
-uint8_t maxChanges = 3;
-double lerpSpeed = 0.000001;
+uint8_t maxChanges = 8;
+uint8_t lerpDuration = 10;
+double lerpSpeed = 1 / (UPDATES_PER_SECOND * lerpDuration);
 double scaleDiff = 0;
 double speedDiff = 0;
 double speedStepSize = 0;
 double scaleStepSize = 0;
-double lerpStepCurrent = 1;
+double lerpStepCurrent = 0;
 
 // for blending in palettes smoothly
 CRGBPalette16 targetPalette(RainbowColors_p);
 CRGBPalette16 currentPalette(RainbowColors_p);
+boolean isSwitchingPalette = true;
 
 void setup()
 {
@@ -69,7 +72,15 @@ void mapCoordToColor()
     {
         // first value is the radius
 
-        int xoffset = i * scale * (NUM_LEDS > 86 ? 4 : 1);
+        int xoffset;
+        if (NUM_LEDS < lowResStripeStart)
+        {
+            xoffset = i * scale;
+        }
+        else
+        {
+            xoffset = lowResStripeStart * scale + (i - lowResStripeStart) * scale * scaleFactor2;
+        }
         // double z_frac = (1.0 / 30.0) * (i % 30);
         double z_frac = 0;
         uint8_t index = inoise8(x + xoffset + z_frac, z + z_frac);
@@ -121,14 +132,14 @@ void mapCoordToColor2()
         // double z_frac = (1.0 / 10.0) * (i % 10);
         double z_frac = 0;
         uint8_t index = inoise8(x + xoffset + z_frac, z + z_frac);
-        // uint8_t bri = inoise8(y, z + xoffset); // another random point for brightness
+        uint8_t bri = inoise8(y, z + xoffset); // another random point for brightness
 
         if (dataSmoothing)
         {
             uint8_t oldindex = inoise8(x + xoffset - speed + z_frac, z - speed + z_frac);
-            // uint8_t oldbri = inoise8(y - speed / 2, z - speed + xoffset);
+            uint8_t oldbri = inoise8(y - speed / 2, z - speed + xoffset);
             index = scale8(oldindex, dataSmoothing) + scale8(index, 256 - dataSmoothing);
-            // bri = scale8(oldbri, dataSmoothing) + scale8(index, 256 - dataSmoothing);
+            bri = scale8(oldbri, dataSmoothing) + scale8(index, 256 - dataSmoothing);
         }
 
         // if this palette is a 'loop', add a slowly-changing base value
@@ -139,23 +150,18 @@ void mapCoordToColor2()
 
         // brighten up, as the color palette itself often contains the
         // light/dark dynamic range desired
-        // if (bri > 127)
-        // {
-        //     bri = 255;
-        // }
-        // else
-        // {
-        //     bri = dim8_raw(bri * 2);
-        // }
+        if (bri > 127)
+        {
+            bri = 255;
+        }
+        else
+        {
+            bri = dim8_raw(bri * 2);
+        }
 
-        CRGB color = ColorFromPalette(currentPalette, index, 255);
+        CRGB color = ColorFromPalette(currentPalette, index, bri);
         leds2[i] = color;
     }
-}
-
-void resetLerp()
-{
-    lerpAmount = 0;
 }
 
 void loop()
@@ -166,10 +172,19 @@ void loop()
 
     nblendPaletteTowardPalette(currentPalette, targetPalette, maxChanges);
 
-    if (lerpStepCurrent < 1)
+    if (lerpStepCurrent < 1.0)
     {
-        speed += speedStepSize;
-        scale += scaleStepSize;
+        if (lerpStepCurrent < 0.5)
+        {
+
+            speed += 2 * speedStepSize * lerpStepCurrent;
+            scale += 2 * scaleStepSize * lerpStepCurrent;
+        }
+        else
+        {
+            speed += 2 * speedStepSize * (1 - lerpStepCurrent);
+            scale += 2 * scaleStepSize * (1 - lerpStepCurrent);
+        }
         lerpStepCurrent += lerpSpeed;
     }
 
@@ -212,7 +227,7 @@ void ChangePaletteAndSettingsPeriodically()
         }
         if (secondHand == 8)
         {
-            setPalette(getPurpleAndGreenPalette(), 4, 6, 1);
+            setPalette(getPurpleAndGreenPalette(), 4, 20, 1);
         }
         if (secondHand == 15)
         {
@@ -246,16 +261,16 @@ void ChangePaletteAndSettingsPeriodically()
     }
 }
 
-void SetupRandomPalette()
+CRGBPalette16 getRandomPalette()
 {
-    targetPalette = CRGBPalette16(
+    return CRGBPalette16(
         CHSV(random8(), 255, 32),
         CHSV(random8(), 255, 255),
         CHSV(random8(), 128, 255),
         CHSV(random8(), 255, 255));
 }
 
-void SetupBlackAndWhiteStripedPalette()
+CRGBPalette16 getBlackAndWhiteStripedPalette()
 {
     // 'black out' all 16 palette entries...
     fill_solid(targetPalette, 16, CRGB::Black);
@@ -263,16 +278,17 @@ void SetupBlackAndWhiteStripedPalette()
     targetPalette[0] = CRGB::White;
     //  targetPalette[9] = CRGB::White;
     targetPalette[11] = CRGB::White;
+    return targetPalette;
 }
 
 // This function sets up a palette of purple and green stripes.
-void SetupPurpleAndGreenPalette()
+CRGBPalette16 getPurpleAndGreenPalette()
 {
     CRGB purple = CHSV(HUE_PURPLE, 255, 255);
     CRGB green = CHSV(HUE_GREEN, 255, 255);
     CRGB black = CRGB::Black;
 
-    targetPalette = CRGBPalette16(
+    return CRGBPalette16(
         green, green, black, black,
         purple, purple, black, black,
         green, green, black, black,
