@@ -3,7 +3,7 @@
 // LED
 #define LED_PIN 3
 #define LED_PIN2 5
-#define BRIGHTNESS 115
+#define BRIGHTNESS 255
 #define LED_TYPE WS2812B
 #define COLOR_ORDER GRB // GRB for WS2812, BRG for WS2811
 #define NUM_LEDS 138
@@ -132,12 +132,12 @@ void mapCoordToColor2()
         // double z_frac = (1.0 / 10.0) * (i % 10);
         double z_frac = 0;
         uint8_t index = inoise8(x + xoffset + z_frac, z + z_frac);
-        uint8_t bri = inoise8(y, z + xoffset); // another random point for brightness
+        uint8_t bri = inoise8(x - z_frac, z + xoffset - z_frac); // another random point for brightness
 
         if (dataSmoothing)
         {
             uint8_t oldindex = inoise8(x + xoffset - speed + z_frac, z - speed + z_frac);
-            uint8_t oldbri = inoise8(y - speed / 2, z - speed + xoffset);
+            uint8_t oldbri = inoise8(x - speed - z_frac, z - speed + xoffset - z_frac);
             index = scale8(oldindex, dataSmoothing) + scale8(index, 256 - dataSmoothing);
             bri = scale8(oldbri, dataSmoothing) + scale8(index, 256 - dataSmoothing);
         }
@@ -159,7 +159,7 @@ void mapCoordToColor2()
             bri = dim8_raw(bri * 2);
         }
 
-        CRGB color = ColorFromPalette(currentPalette, index, bri);
+        CRGB color = ColorFromPalette(currentPalette, index, 255);
         leds2[i] = color;
     }
 }
@@ -172,20 +172,25 @@ void loop()
 
     nblendPaletteTowardPalette(currentPalette, targetPalette, maxChanges);
 
-    if (lerpStepCurrent < 1.0)
+    if (lerpStepCurrent < 1)
     {
         if (lerpStepCurrent < 0.5)
         {
 
-            speed += 2 * speedStepSize * lerpStepCurrent;
-            scale += 2 * scaleStepSize * lerpStepCurrent;
+            speed += 4 * speedStepSize * lerpStepCurrent;
+            scale += 4 * scaleStepSize * lerpStepCurrent;
         }
         else
         {
-            speed += 2 * speedStepSize * (1 - lerpStepCurrent);
-            scale += 2 * scaleStepSize * (1 - lerpStepCurrent);
+            speed += 4 * speedStepSize * (1 - lerpStepCurrent);
+            scale += 4 * scaleStepSize * (1 - lerpStepCurrent);
         }
         lerpStepCurrent += lerpSpeed;
+    }
+    else
+    {
+        speed = newspeed;
+        scale = newscale;
     }
 
     mapCoordToColor();
@@ -206,11 +211,11 @@ void setPalette(CRGBPalette16 _targetPallete, double _newspeed, double _newscale
     newscale = _newscale * scaleFactor;
     colorLoop = _colorLoop;
     // lerp variables
-    speedDiff = speed - newspeed;
-    scaleDiff = scale - newscale;
+    lerpStepCurrent = 0;
+    speedDiff = newspeed - speed;
+    scaleDiff = newscale - scale;
     speedStepSize = speedDiff * lerpSpeed;
     scaleStepSize = scaleDiff * lerpSpeed;
-    lerpStepCurrent = 0;
 }
 
 void ChangePaletteAndSettingsPeriodically()

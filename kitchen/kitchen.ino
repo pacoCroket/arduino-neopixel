@@ -3,10 +3,9 @@
 // LED
 #define LED_PIN 3
 #define BRIGHTNESS 255
-#define LED_TYPE WS2812
+#define LED_TYPE WS2812B
 #define COLOR_ORDER GRB // GRB for WS2812, BRG for WS2811
 #define NUM_LEDS 130
-#define BUTTON_PIN 2
 
 // The leds
 CRGB leds[NUM_LEDS];
@@ -16,13 +15,15 @@ static double z;
 
 // SETTINGS
 #define HOLD_PALETTES_X_TIMES_AS_LONG 8
-#define UPDATES_PER_SECOND 20
+#define UPDATES_PER_SECOND 10
 
-double speedFactor = 0.0625;
-double scaleFactor = 2;
+double speedFactor = 1 / 32;
+double scaleFactor = 4;
+// Kitchen LEDs use higher LED density and make a spiral from about LED #90
+uint8_t ledsCloserFromId = 90;
+
 double speed = 6 * speedFactor; // speed is set dynamically once we've started up
 double scale = 4 * scaleFactor; // scale is set dynamically once we've started up
-//
 double newscale = scale;
 double newspeed = speed;
 uint8_t colorLoop = 1;
@@ -35,8 +36,6 @@ double speedDiff = 0;
 double speedStepSize = 0;
 double scaleStepSize = 0;
 double lerpStepCurrent = 0;
-// Kitchen LEDs use higher LED density and make a spiral from about LED #90
-uint8_t ledsCloserFromId = 90;
 
 // for blending in palettes smoothly
 CRGBPalette16 targetPalette(RainbowColors_p);
@@ -61,7 +60,7 @@ void mapCoordToColor()
   static uint8_t ihue = 0;
 
   uint8_t dataSmoothing = 0;
-  if (speed < 4)
+  if (speed < 8)
   {
     dataSmoothing = 220 - (speed * 4);
   }
@@ -76,7 +75,7 @@ void mapCoordToColor()
     else
     {
       //      xoffset = scale * (ledsCloserFromId + 0.8 * (ledsCloserFromId - i - 70));-
-      xoffset = scale * (ledsCloserFromId - 50) - (i - ledsCloserFromId) * scale * 4;
+      xoffset = scale * (ledsCloserFromId - 60) - (i - ledsCloserFromId) * scale * 2;
     }
 
     uint8_t index = inoise8(x + xoffset, z);
@@ -84,9 +83,9 @@ void mapCoordToColor()
 
     if (dataSmoothing)
     {
-      uint8_t oldindex = inoise8(x + xoffset - speed / 4, z - speed / 2);
+      uint8_t oldindex = inoise8(x + xoffset - speed, z - speed);
       index = scale8(oldindex, dataSmoothing) + scale8(index, 256 - dataSmoothing);
-      uint8_t oldbri = inoise8(x - speed / 4, z - speed / 2 + xoffset);
+      uint8_t oldbri = inoise8(x - speed, z - speed + xoffset);
       bri = scale8(oldbri, dataSmoothing) + scale8(index, 256 - dataSmoothing);
     }
 
@@ -109,9 +108,8 @@ void mapCoordToColor()
     leds[i] = color;
   }
 
-  z += speed / 2;
-  // apply slow drift to X and Y, just for visual variation.
-  x += speed / 4;
+  z += speed;
+  x += speed;
 
   ihue++;
 }
@@ -125,20 +123,25 @@ void loop()
 
   nblendPaletteTowardPalette(currentPalette, targetPalette, maxChanges);
 
-  if (lerpStepCurrent < 1.0)
+  if (lerpStepCurrent < 1)
   {
     if (lerpStepCurrent < 0.5)
     {
 
-      speed += 2 * speedStepSize * lerpStepCurrent;
-      scale += 2 * scaleStepSize * lerpStepCurrent;
+      speed += 4 * speedStepSize * lerpStepCurrent;
+      scale += 4 * scaleStepSize * lerpStepCurrent;
     }
     else
     {
-      speed += 2 * speedStepSize * (1 - lerpStepCurrent);
-      scale += 2 * scaleStepSize * (1 - lerpStepCurrent);
+      speed += 4 * speedStepSize * (1 - lerpStepCurrent);
+      scale += 4 * scaleStepSize * (1 - lerpStepCurrent);
     }
     lerpStepCurrent += lerpSpeed;
+  }
+  else
+  {
+    speed = newspeed;
+    scale = newscale;
   }
 
   mapCoordToColor();
@@ -153,11 +156,11 @@ void setPalette(CRGBPalette16 _targetPallete, double _newspeed, double _newscale
   newscale = _newscale * scaleFactor;
   colorLoop = _colorLoop;
   // lerp variables
-  speedDiff = speed - newspeed;
-  scaleDiff = scale - newscale;
+  lerpStepCurrent = 0;
+  speedDiff = newspeed - speed;
+  scaleDiff = newscale - scale;
   speedStepSize = speedDiff * lerpSpeed;
   scaleStepSize = scaleDiff * lerpSpeed;
-  lerpStepCurrent = 0;
 }
 
 void ChangePaletteAndSettingsPeriodically()

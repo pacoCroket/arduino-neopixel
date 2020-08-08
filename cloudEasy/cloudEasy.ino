@@ -16,11 +16,11 @@ static double z;
 
 // SETTINGS
 #define HOLD_PALETTES_X_TIMES_AS_LONG 8 // duration of a pattern
-#define UPDATES_PER_SECOND 40           // refresh rate
+#define UPDATES_PER_SECOND 30           // refresh rate
 double speedFactor = 1.0 / 16;          // global speed
 double scaleFactor = 4;                 // global scale
-uint8_t maxChanges = 7;                 // palette blend (smaller slower)
-uint8_t lerpDuration = 18;              // seconds of transition for speed and scale
+uint8_t maxChanges = 6;                 // palette blend (smaller slower)
+uint8_t lerpDuration = 20;              // seconds of transition for speed and scale
 uint8_t distBetweenChunks = 3;
 ///////
 double speed = 6 * speedFactor; // speed is set dynamically once we've started up
@@ -66,7 +66,8 @@ void mapCoordToColor()
 
     for (int i = 0; i < NUM_LEDS; i++)
     {
-        double xoffset = (i + distBetweenChunks * (i / CHUNK_LENGTH)) * scale + 0.1 * i % 10;
+        double fractionOffset = 0.125 * (i % 8);
+        double xoffset = (i + distBetweenChunks * (i / CHUNK_LENGTH)) * scale + fractionOffset;
 
         uint8_t index = inoise8(x + xoffset, z);
         uint8_t bri = inoise8(x, z + xoffset); // another random point for brightness
@@ -82,7 +83,7 @@ void mapCoordToColor()
         // if this palette is a 'loop', add a slowly-changing base value
         // if (colorLoop)
         // {
-        //   index += ihue;
+        //     index += ihue;
         // }
 
         if (bri > 127)
@@ -111,20 +112,25 @@ void loop()
 
     nblendPaletteTowardPalette(currentPalette, targetPalette, maxChanges);
 
-    if (lerpStepCurrent < 1.0)
+    if (lerpStepCurrent < 1)
     {
         if (lerpStepCurrent < 0.5)
         {
 
-            speed += 2 * speedStepSize * lerpStepCurrent;
-            scale += 2 * scaleStepSize * lerpStepCurrent;
+            speed += 4 * speedStepSize * lerpStepCurrent;
+            scale += 4 * scaleStepSize * lerpStepCurrent;
         }
         else
         {
-            speed += 2 * speedStepSize * (1 - lerpStepCurrent);
-            scale += 2 * scaleStepSize * (1 - lerpStepCurrent);
+            speed += 4 * speedStepSize * (1 - lerpStepCurrent);
+            scale += 4 * scaleStepSize * (1 - lerpStepCurrent);
         }
         lerpStepCurrent += lerpSpeed;
+    }
+    else
+    {
+        speed = newspeed;
+        scale = newscale;
     }
 
     mapCoordToColor();
@@ -139,11 +145,11 @@ void setPalette(CRGBPalette16 _targetPallete, double _newspeed, double _newscale
     newscale = _newscale * scaleFactor;
     colorLoop = _colorLoop;
     // lerp variables
-    speedDiff = speed - newspeed;
-    scaleDiff = scale - newscale;
+    lerpStepCurrent = 0;
+    speedDiff = newspeed - speed;
+    scaleDiff = newscale - scale;
     speedStepSize = speedDiff * lerpSpeed;
     scaleStepSize = scaleDiff * lerpSpeed;
-    lerpStepCurrent = 0;
 }
 
 void ChangePaletteAndSettingsPeriodically()
