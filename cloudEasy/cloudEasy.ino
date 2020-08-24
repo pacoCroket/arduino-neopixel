@@ -5,10 +5,9 @@
 #define BRIGHTNESS 255
 #define LED_TYPE WS2812B
 #define COLOR_ORDER GRB // GRB for WS2812, BRG for WS2811
-#define NUM_LEDS 60
+#define NUM_LEDS 120
 #define CHUNK_LENGTH 3 // LEDs per chunk
 
-// The leds
 CRGB leds[NUM_LEDS];
 
 static double x;
@@ -19,8 +18,8 @@ static double z;
 #define UPDATES_PER_SECOND 30           // refresh rate
 double speedFactor = 1.0 / 16;          // global speed
 double scaleFactor = 4;                 // global scale
-uint8_t maxChanges = 6;                 // palette blend (smaller slower)
-uint8_t lerpDuration = 20;              // seconds of transition for speed and scale
+uint8_t maxChanges = 4;                 // palette blend (smaller slower)
+uint8_t lerpDuration = 30;              // seconds of transition for speed and scale
 uint8_t distBetweenChunks = 3;
 ///////
 double speed = 6 * speedFactor; // speed is set dynamically once we've started up
@@ -35,6 +34,13 @@ double speedDiff = 0;
 double speedStepSize = 0;
 double scaleStepSize = 0;
 double lerpStepCurrent = 0;
+// fade variables
+uint8_t currentBri = 128;
+uint8_t nextFadeDuration;
+uint8_t randomDurationBottom = 60;
+uint8_t randomDurationCeil = 180;
+boolean isFadingDown = true;
+uint8_t darkSleepDuration = 1000; // duration of the darkness in millis
 
 // for blending in palettes smoothly
 CRGBPalette16 targetPalette(RainbowColors_p);
@@ -43,15 +49,42 @@ boolean isSwitchingPalette = true;
 
 void setup()
 {
+    randomSeed(analogRead(0));
     //  Serial.begin(9600);
 
     LEDS.setMaxPowerInVoltsAndMilliamps(5, 1000);
     LEDS.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS);
     LEDS.setBrightness(BRIGHTNESS);
+    FastLED.setDither( 0 );
 
     // Initialize our coordinates to some random values
-    x = random8();
-    z = random8();
+    x = random16();
+    z = random16();
+
+    nextFadeDuration = random8(randomDurationBottom, randomDurationCeil);
+}
+
+void fadeToBlack()
+{
+  if (millis()/1000 > nextFadeDuration) {
+    if (isFadingDown) {
+       currentBri -=1;
+    } else {
+      currentBri += 1;
+    }
+
+    LEDS.setBrightness(dim8_raw(quadwave8(currentBri)));
+  
+    if (currentBri <= 0) {
+      LEDS.delay(darkSleepDuration);
+      isFadingDown = false;
+    }
+
+    if (currentBri == 128) {
+      nextFadeDuration = random8(randomDurationBottom, randomDurationCeil);
+      isFadingDown = true;
+    } 
+  }
 }
 
 void mapCoordToColor()
@@ -134,6 +167,8 @@ void loop()
     }
 
     mapCoordToColor();
+    fadeToBlack();
+
     LEDS.show();
     LEDS.delay(1000 / UPDATES_PER_SECOND);
 }
@@ -232,4 +267,19 @@ CRGBPalette16 getPurpleAndGreenPalette()
         purple, purple, black, black,
         green, green, black, black,
         purple, purple, black, black);
+}
+
+CRGBPalette16 getPurpleAndLilaPalette()
+{
+    CRGB a = CRGB(189, 0, 255);
+    CRGB b = CRGB(214, 0, 255);
+    CRGB c = CRGB(176, 0, 255);
+    CRGB d = CRGB(150, 0, 255);
+    CRGB e = CRGB(163, 0, 255);
+
+    return CRGBPalette16(
+        a, a, b, b,
+        c, b, c, d,
+        d, e, d, c,
+        c, d, d, e);
 }
