@@ -1,11 +1,12 @@
 #include <FastLED.h>
+#include <Entropy.h>
 
 // LED
 #define LED_PIN 3
 #define BRIGHTNESS 255
 #define LED_TYPE WS2812B
 #define COLOR_ORDER GRB // GRB for WS2812, BRG for WS2811
-#define NUM_LEDS 120
+#define NUM_LEDS 60
 #define CHUNK_LENGTH 3 // LEDs per chunk
 
 CRGB leds[NUM_LEDS];
@@ -18,9 +19,10 @@ static double z;
 #define UPDATES_PER_SECOND 30           // refresh rate
 double speedFactor = 1.0 / 16;          // global speed
 double scaleFactor = 4;                 // global scale
-uint8_t maxChanges = 4;                 // palette blend (smaller slower)
+uint8_t maxChanges = 5;                 // palette blend (smaller slower)
 uint8_t lerpDuration = 30;              // seconds of transition for speed and scale
-uint8_t distBetweenChunks = 3;
+uint8_t distBetweenChunks = 2;
+boolean brightnessNoiseOn = false;
 ///////
 double speed = 6 * speedFactor; // speed is set dynamically once we've started up
 double scale = 4 * scaleFactor; // scale is set dynamically once we've started up
@@ -36,11 +38,13 @@ double scaleStepSize = 0;
 double lerpStepCurrent = 0;
 // fade variables
 uint8_t currentBri = 128;
-uint8_t nextFadeDuration;
-uint8_t randomDurationBottom = 60;
-uint8_t randomDurationCeil = 180;
+uint8_t nextFadeDuration; // in seconds
+uint8_t randomDurationBottom = 200;
+uint8_t randomDurationCeil = 250;
 boolean isFadingDown = true;
-uint8_t darkSleepDuration = 1000; // duration of the darkness in millis
+uint8_t darkSleepDuration = 200; // duration of the darkness in millis
+long lastFadeTime = 0;
+uint8_t fadeSpeed = 2;
 
 // for blending in palettes smoothly
 CRGBPalette16 targetPalette(RainbowColors_p);
@@ -49,6 +53,7 @@ boolean isSwitchingPalette = true;
 
 void setup()
 {
+  Entropy.Initialize();
     randomSeed(analogRead(0));
     //  Serial.begin(9600);
 
@@ -58,31 +63,36 @@ void setup()
     FastLED.setDither( 0 );
 
     // Initialize our coordinates to some random values
-    x = random16();
-    z = random16();
+    x = Entropy.random(WDT_RETURN_BYTE);
+    z = Entropy.random(WDT_RETURN_BYTE);
 
-    nextFadeDuration = random8(randomDurationBottom, randomDurationCeil);
+    nextFadeDuration = getNextFadeDuration() ; // in seconds
+}
+
+uint8_t getNextFadeDuration() {
+ return Entropy.random(60, 120);
 }
 
 void fadeToBlack()
 {
-  if (millis()/1000 > nextFadeDuration) {
+  if (millis() > nextFadeDuration*1000 + lastFadeTime) {
     if (isFadingDown) {
-       currentBri -=1;
+       currentBri -= fadeSpeed;
     } else {
-      currentBri += 1;
+      currentBri += fadeSpeed;
     }
 
     LEDS.setBrightness(dim8_raw(quadwave8(currentBri)));
   
-    if (currentBri <= 0) {
-      LEDS.delay(darkSleepDuration);
+    if (currentBri < fadeSpeed) {
       isFadingDown = false;
+      LEDS.delay(darkSleepDuration);
     }
 
-    if (currentBri == 128) {
-      nextFadeDuration = random8(randomDurationBottom, randomDurationCeil);
+    if (currentBri > 127 ) {
+      nextFadeDuration = getNextFadeDuration();
       isFadingDown = true;
+      lastFadeTime = millis();
     } 
   }
 }
@@ -99,18 +109,25 @@ void mapCoordToColor()
 
     for (int i = 0; i < NUM_LEDS; i++)
     {
-        double fractionOffset = 0.125 * (i % 8);
+        //double fractionOffset = 0.125 * (i % 8);
+        double fractionOffset = 0;
         double xoffset = (i + distBetweenChunks * (i / CHUNK_LENGTH)) * scale + fractionOffset;
 
         uint8_t index = inoise8(x + xoffset, z);
-        uint8_t bri = inoise8(x, z + xoffset); // another random point for brightness
+        uint8_t bri;
+        if (brightnessNoiseOn) 
+        {
+          bri = inoise8(x, z + xoffset); // another random point for brightness
+          if (dataSmoothing) {          
+              uint8_t oldbri = inoise8(x - speed, z - speed + xoffset);
+              bri = scale8(oldbri, dataSmoothing) + scale8(index, 256 - dataSmoothing);
+          }        
+        }
 
         if (dataSmoothing)
         {
             uint8_t oldindex = inoise8(x + xoffset - speed, z - speed);
             index = scale8(oldindex, dataSmoothing) + scale8(index, 256 - dataSmoothing);
-            uint8_t oldbri = inoise8(x - speed, z - speed + xoffset);
-            bri = scale8(oldbri, dataSmoothing) + scale8(index, 256 - dataSmoothing);
         }
 
         // if this palette is a 'loop', add a slowly-changing base value
@@ -119,7 +136,7 @@ void mapCoordToColor()
         //     index += ihue;
         // }
 
-        if (bri > 127)
+        if (bri > 127 || !brightnessNoiseOn) 
         {
             bri = 255;
         }
