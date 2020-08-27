@@ -15,14 +15,14 @@ static double x;
 static double z;
 
 // SETTINGS
-#define HOLD_PALETTES_X_TIMES_AS_LONG 8 // duration of a pattern
-#define UPDATES_PER_SECOND 30           // refresh rate
+#define HOLD_PALETTES_X_TIMES_AS_LONG 10 // duration of a pattern
+#define UPDATES_PER_SECOND 35           // refresh rate
 double speedFactor = 1.0 / 16;          // global speed
-double scaleFactor = 4;                 // global scale
+double scaleFactor = 5;                 // global scale (lower for bigger chunks, hight for mor detail)
 uint8_t maxChanges = 5;                 // palette blend (smaller slower)
 uint8_t lerpDuration = 30;              // seconds of transition for speed and scale
 uint8_t distBetweenChunks = 2;
-boolean brightnessNoiseOn = false;
+boolean brightnessNoiseOn = true;
 ///////
 double speed = 6 * speedFactor; // speed is set dynamically once we've started up
 double scale = 4 * scaleFactor; // scale is set dynamically once we've started up
@@ -37,12 +37,10 @@ double speedStepSize = 0;
 double scaleStepSize = 0;
 double lerpStepCurrent = 0;
 // fade variables
-uint8_t currentBri = 128;
+boolean isRandomFadeOn = true;
+uint8_t currentFadeStep = 0;
 uint8_t nextFadeDuration; // in seconds
-uint8_t randomDurationBottom = 200;
-uint8_t randomDurationCeil = 250;
-boolean isFadingDown = true;
-uint8_t darkSleepDuration = 200; // duration of the darkness in millis
+uint8_t darkDuration = 200; // duration of the darkness in millis
 long lastFadeTime = 0;
 uint8_t fadeSpeed = 2;
 
@@ -60,7 +58,7 @@ void setup()
     LEDS.setMaxPowerInVoltsAndMilliamps(5, 1000);
     LEDS.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS);
     LEDS.setBrightness(BRIGHTNESS);
-    FastLED.setDither( 0 );
+//    FastLED.setDither( 0 );
 
     // Initialize our coordinates to some random values
     x = Entropy.random(WDT_RETURN_BYTE);
@@ -70,28 +68,20 @@ void setup()
 }
 
 uint8_t getNextFadeDuration() {
- return Entropy.random(60, 120);
+ return Entropy.random(30, 60 );
+//return 10;
 }
 
-void fadeToBlack()
+void handleFadeToBlack()
 {
   if (millis() > nextFadeDuration*1000 + lastFadeTime) {
-    if (isFadingDown) {
-       currentBri -= fadeSpeed;
-    } else {
-      currentBri += fadeSpeed;
-    }
 
-    LEDS.setBrightness(dim8_raw(quadwave8(currentBri)));
-  
-    if (currentBri < fadeSpeed) {
-      isFadingDown = false;
-      LEDS.delay(darkSleepDuration);
-    }
+    LEDS.setBrightness(dim8_raw(quadwave8(127 + currentFadeStep)));
+    currentFadeStep += fadeSpeed;
 
-    if (currentBri > 127 ) {
+    if (currentFadeStep >= 255 - fadeSpeed ) {
+      currentFadeStep = 0;
       nextFadeDuration = getNextFadeDuration();
-      isFadingDown = true;
       lastFadeTime = millis();
     } 
   }
@@ -117,9 +107,9 @@ void mapCoordToColor()
         uint8_t bri;
         if (brightnessNoiseOn) 
         {
-          bri = inoise8(x, z + xoffset); // another random point for brightness
+          bri = inoise8(x, z + xoffset/3); // another random point for brightness
           if (dataSmoothing) {          
-              uint8_t oldbri = inoise8(x - speed, z - speed + xoffset);
+              uint8_t oldbri = inoise8(x - speed, z - speed + xoffset/3);
               bri = scale8(oldbri, dataSmoothing) + scale8(index, 256 - dataSmoothing);
           }        
         }
@@ -131,10 +121,10 @@ void mapCoordToColor()
         }
 
         // if this palette is a 'loop', add a slowly-changing base value
-        // if (colorLoop)
-        // {
-        //     index += ihue;
-        // }
+//         if (colorLoop)
+//         {
+//             index += ihue;
+//         }
 
         if (bri > 127 || !brightnessNoiseOn) 
         {
@@ -142,7 +132,8 @@ void mapCoordToColor()
         }
         else
         {
-            bri = dim8_raw(bri * 2);
+             bri = dim8_raw(bri*2);
+             //bri = 0;
         }
 
         CRGB color = ColorFromPalette(currentPalette, index, bri);
@@ -184,7 +175,9 @@ void loop()
     }
 
     mapCoordToColor();
-    fadeToBlack();
+    if (isRandomFadeOn) {
+      handleFadeToBlack();
+    }
 
     LEDS.show();
     LEDS.delay(1000 / UPDATES_PER_SECOND);
@@ -224,7 +217,11 @@ void ChangePaletteAndSettingsPeriodically()
         {
             setPalette(getRandomPalette(), 6, 2, 1);
         }
-        if (secondHand == 25)
+        if (secondHand == 21)
+        {
+          setPalette(getBlackAndWhiteStripedPalette(), 45, 2, 1);
+        }
+        if (secondHand == 28)
         {
             setPalette(RainbowColors_p, 6, 4, 1);
         }
@@ -236,13 +233,12 @@ void ChangePaletteAndSettingsPeriodically()
         {
             setPalette(OceanColors_p, 8, 16, 1);
         }
-        if (secondHand == 45)
+        if (secondHand == 44)
         {
             setPalette(PartyColors_p, 6, 4, 1);
         }
-        if (secondHand == 50)
+        if (secondHand == 51)
         {
-
             setPalette(getRandomPalette(), 4, 2, 1);
         }
         if (secondHand == 55)
